@@ -34,11 +34,13 @@ raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
 ```
 
 
-## 1.2 Organizational Ambidexterity Survey Scales
+# 2 Organizational Ambidexterity Survey Scales
 
 
 
-### 1.2.1 Exploration
+## 2.1 Exploration
+
+### 2.1.1 Check missings and completion rate
 
 ```{r exploration scale missing}
 # check missingness in exploration scale items
@@ -46,4 +48,10 @@ get_missing_stats(data = raw.data, prefix = "explore", caption = "Exploration sc
 ```
 
 
-s
+## 2.2 Exploitation
+
+```{r exploitation scale missing}
+# check missingness in exploitation scale items
+get_missing_stats(data = raw.data, prefix = "exploit", caption = "Exploitation scale completion rate")
+```
+
