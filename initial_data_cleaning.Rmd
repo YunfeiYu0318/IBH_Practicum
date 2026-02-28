@@ -1,0 +1,17 @@
+---
+title: "Initial Data Inspection"
+author: "Yunfei Yu, 1005976918"
+date: "2026-02-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load data
+
+```{r}
+
+```
+
