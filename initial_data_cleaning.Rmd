@@ -9,9 +9,41 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Load data
 
-```{r}
-
+```{r libraries, message=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+library(skimr)
 ```
 
+```{r import helper functions}
+source("helper_functions.R")
+```
+
+
+# 1 Data checks
+
+## 1.1 Load data and initial inspection
+
+```{r load data}
+raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
+# raw.data %>% skim()
+```
+
+
+## 1.2 Organizational Ambidexterity Survey Scales
+
+
+
+### 1.2.1 Exploration
+
+```{r exploration scale missing}
+# check missingness in exploration scale items
+get_missing_stats(data = raw.data, prefix = "explore", caption = "Exploration scale completion rate")
+```
+
+
+s
