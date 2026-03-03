@@ -21,7 +21,7 @@ library(naniar)
 library(VIM)
 ```
 
-```{r import helper functions}
+```{r import helper functions, message=FALSE}
 source("helper_functions.R")
 ```
 
@@ -62,19 +62,8 @@ This section checks the distributions and handles missing values for the survey 
 ### 2.1.1 Check distributions
 
 ```{r explore scale answer dist, fig.cap="Distribution of exploration survey scores"}
-raw.data %>% 
-  select(record_id, starts_with("explore")) %>% 
-  pivot_longer(
-    cols = starts_with("explore"),
-    names_to = "item",
-    values_to = "score"
-  ) %>% 
-  mutate(score = factor(score)) %>% 
-  ggplot(aes(x = score)) +
-  geom_bar(fill = "royalblue3", color = "white") +
-  facet_wrap(~item, ncol = 3) +
-  theme_minimal() +
-  labs(x = "Score", y = "Count")
+# plot distributions for each item in exploration survey
+plt_scale_dist(raw.data, prefix = "explore")
 ```
 
 ### 2.1.2 Check missing and completion rates
@@ -91,6 +80,10 @@ get_missing_stats(data = raw.data, prefix = "explore", caption = "Exploration sc
 
 ### 2.2.1 Check distributions
 
+```{r exploit scale answer dist, fig.cap="Distribution of exploitation survey scores"}
+# plot distributions for each item in exploitation survey
+plt_scale_dist(raw.data, prefix = "exploit")
+```
 
 
 ### 2.2.2 Check missing and completion rates
@@ -103,8 +96,12 @@ get_missing_stats(data = raw.data, prefix = "exploit", caption = "Exploitation s
 
 ## 2.3 De-implementation Survey
 
-
 ### 2.3.1 Check distributions
+
+```{r deimp scale answer dist, fig.cap="Distribution of deimplementation survey scores"}
+# plot distributions for each item in deimp survey
+plt_scale_dist(raw.data, prefix = "deimplement")
+```
 
 
 
