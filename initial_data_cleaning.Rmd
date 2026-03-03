@@ -17,6 +17,8 @@ library(tidyverse)
 library(kableExtra)
 library(knitr)
 library(skimr)
+library(naniar)
+library(VIM)
 ```
 
 ```{r import helper functions}
@@ -26,7 +28,7 @@ source("helper_functions.R")
 
 # 1 Data checks
 
-## 1.1 Load data and initial inspection
+## 1.1 Load Data and Initial Inspection
 
 ```{r load data}
 raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
@@ -34,24 +36,60 @@ raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
 ```
 
 
-# 2 Organizational Ambidexterity Survey Scales
+# 2 Explore NA Patterns
 
-
-
-## 2.1 Exploration
-
-### 2.1.1 Check missings and completion rate
+## 2.1 Organizational Ambidexterity Survey - Exploration
 
 ```{r exploration scale missing}
 # check missingness in exploration scale items
+# get_missing_stats is a helper function from helper_functions.R
 get_missing_stats(data = raw.data, prefix = "explore", caption = "Exploration scale completion rate")
 ```
 
 
-## 2.2 Exploitation
+
+## 2.2 Organizational Ambidexterity Survey - Exploitation
 
 ```{r exploitation scale missing}
 # check missingness in exploitation scale items
 get_missing_stats(data = raw.data, prefix = "exploit", caption = "Exploitation scale completion rate")
 ```
+
+
+## 2.3 De-implementation Survey
+
+```{r deimp scale missing}
+# check missingness in exploitation scale items
+get_missing_stats(data = raw.data, prefix = "deimplement", caption = "De-implementation scale completion rate")
+```
+
+
+
+## 2.4 Overall Missing Pattern across Three Scales
+
+```{r scales upset plot, fig.height=12, out.width="100%"}
+learning.scales <- raw.data %>% 
+  select(starts_with(c("explore", "exploit", "deimplement")))
+
+gg_miss_upset(learning.scales, nsets = ncol(learning.scales))
+```
+
+
+
+The Learning Ambidexterity scales and De-implementation scale appear to show highly systematic patterns of missingness. The most common pattern is skipping (missing) all questions in all three scales, followed by those who filled out only the exploration survey but missed the exploitation and de-implementation surveys entirely, and finally those who filled out the exploration and exploitation surveys, but not the de-implementation survey.
+  
+This suggests missingness is likely driven by an external factor (ex. specific groups of non-respondents, lost interest, or a specific survey is less relevant), rather than missing at random.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
