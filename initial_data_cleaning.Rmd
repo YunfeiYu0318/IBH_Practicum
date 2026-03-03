@@ -36,9 +36,33 @@ raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
 ```
 
 
+## 1.2 Learning Survey Scales
+
+
+
+### 1.2.1 Organizational Ambidexterity Survey - Exploration
+
+```{r explore scale answer dist, fig.cap="Distribution of exploration survey scores"}
+raw.data %>% 
+  select(record_id, starts_with("explore")) %>% 
+  pivot_longer(
+    cols = starts_with("explore"),
+    names_to = "item",
+    values_to = "score"
+  ) %>% 
+  mutate(score = factor(score)) %>% 
+  ggplot(aes(x = score)) +
+  geom_bar(fill = "royalblue3", color = "white") +
+  facet_wrap(~item, ncol = 3) +
+  theme_minimal() +
+  labs(x = "Score", y = "Count")
+```
+
+
+
 # 2 Explore NA Patterns
 
-## 2.1 Survey Scales
+## 2.1 Learning Survey Scales
 
 ### 2.1.1 Organizational Ambidexterity Survey - Exploration
 
@@ -81,7 +105,9 @@ The Learning Ambidexterity scales and De-implementation scale appear to show hig
   
 This suggests missingness is likely driven by an external factor (ex. specific groups of non-respondents, lost interest, or a specific survey is less relevant), rather than missing at random.
 
+## 2.2 Demographics
 
+### 2.1 
 
 
 
