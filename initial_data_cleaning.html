@@ -590,17 +590,47 @@ library(skimr)
 library(naniar)
 library(VIM)</code></pre>
 <pre class="r"><code>source(&quot;helper_functions.R&quot;)</code></pre>
-<div id="data-checks" class="section level1">
-<h1>1 Data checks</h1>
-<div id="load-data-and-initial-inspection" class="section level2">
-<h2>1.1 Load Data and Initial Inspection</h2>
+<div id="outline" class="section level1">
+<h1>1 Outline</h1>
+<div id="scales" class="section level2">
+<h2>Scales</h2>
+<p>7-point Likert Scale. 8 = Not Applicable.</p>
+<ol style="list-style-type: decimal">
+<li>Check distributions of scores for each item(including 8 and
+missing).</li>
+<li>Check missing values (percentage missing in each survey item, and
+missing patterns across all items and all scales). 2.1 Explore
+demographic differences between the missing vs. non-missing groups. 2.2
+Explore demographic difference between the “actual missing (NA)” group
+vs. people who chose 8.</li>
+<li>Compute mean scores and standard deviations for each item after
+removing NAs and 8.</li>
+</ol>
+</div>
+<div id="demographics" class="section level2">
+<h2>Demographics</h2>
+<ol style="list-style-type: decimal">
+<li>Attach labels to the demographic dummy variables (i.e. “collapsing”
+multiple dummies into a categorical variable)</li>
+<li>Check distributions</li>
+<li>Check missing values and missing patterns</li>
+<li>Compute summary statistics</li>
+</ol>
 <pre class="r"><code>raw.data &lt;- read_excel(&quot;Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx&quot;)
 # raw.data %&gt;% skim()</code></pre>
 </div>
-<div id="learning-survey-scales" class="section level2">
-<h2>1.2 Learning Survey Scales</h2>
-<div id="organizational-ambidexterity-survey---exploration" class="section level3">
-<h3>1.2.1 Organizational Ambidexterity Survey - Exploration</h3>
+</div>
+<div id="scales-1" class="section level1">
+<h1>2 Scales</h1>
+<p>This section checks the distributions and handles missing values for
+the survey scales, namely, the <strong>Organizational Ambidexterity
+Survey</strong>, <strong>De-implementation Survey</strong>,
+Organizational Capacity for Innovation Survey and Organizational
+Learning Survey.</p>
+<div id="organizational-ambidexterity-survey---exploration" class="section level2">
+<h2>2.1 Organizational Ambidexterity Survey - Exploration</h2>
+<div id="check-distributions" class="section level3">
+<h3>2.1.1 Check distributions</h3>
 <pre class="r"><code>raw.data %&gt;% 
   select(record_id, starts_with(&quot;explore&quot;)) %&gt;% 
   pivot_longer(
@@ -621,14 +651,8 @@ Distribution of exploration survey scores
 </p>
 </div>
 </div>
-</div>
-</div>
-<div id="explore-na-patterns" class="section level1">
-<h1>2 Explore NA Patterns</h1>
-<div id="learning-survey-scales-1" class="section level2">
-<h2>2.1 Learning Survey Scales</h2>
-<div id="organizational-ambidexterity-survey---exploration-1" class="section level3">
-<h3>2.1.1 Organizational Ambidexterity Survey - Exploration</h3>
+<div id="check-missing-and-completion-rates" class="section level3">
+<h3>2.1.2 Check missing and completion rates</h3>
 <pre class="r"><code># check missingness in exploration scale items
 # get_missing_stats is a helper function from helper_functions.R
 get_missing_stats(data = raw.data, prefix = &quot;explore&quot;, caption = &quot;Exploration scale completion rate&quot;)</code></pre>
@@ -782,8 +806,14 @@ explore_innov_def_2
 </tbody>
 </table>
 </div>
-<div id="organizational-ambidexterity-survey---exploitation" class="section level3">
-<h3>2.1.2 Organizational Ambidexterity Survey - Exploitation</h3>
+</div>
+<div id="organizational-ambidexterity-survey---exploitation" class="section level2">
+<h2>2.2 Organizational Ambidexterity Survey - Exploitation</h2>
+<div id="check-distributions-1" class="section level3">
+<h3>2.2.1 Check distributions</h3>
+</div>
+<div id="check-missing-and-completion-rates-1" class="section level3">
+<h3>2.2.2 Check missing and completion rates</h3>
 <pre class="r"><code># check missingness in exploitation scale items
 get_missing_stats(data = raw.data, prefix = &quot;exploit&quot;, caption = &quot;Exploitation scale completion rate&quot;)</code></pre>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
@@ -922,8 +952,14 @@ exploit_innov_def_2
 </tbody>
 </table>
 </div>
-<div id="de-implementation-survey" class="section level3">
-<h3>2.1.3 De-implementation Survey</h3>
+</div>
+<div id="de-implementation-survey" class="section level2">
+<h2>2.3 De-implementation Survey</h2>
+<div id="check-distributions-2" class="section level3">
+<h3>2.3.1 Check distributions</h3>
+</div>
+<div id="check-missing-and-completion-rates-2" class="section level3">
+<h3>2.3.2 Check missing and completion rates</h3>
 <pre class="r"><code># check missingness in exploitation scale items
 get_missing_stats(data = raw.data, prefix = &quot;deimplement&quot;, caption = &quot;De-implementation scale completion rate&quot;)</code></pre>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
@@ -1034,8 +1070,10 @@ deimplement_def2
 </tbody>
 </table>
 </div>
-<div id="overall-missing-pattern-across-three-scales" class="section level3">
-<h3>2.1.4 Overall Missing Pattern across Three Scales</h3>
+</div>
+<div id="missingness-pattern-across-exploration-exploitation-and-de-implementation-surveys" class="section level2">
+<h2>2.4 Missingness Pattern across Exploration, Exploitation and
+De-Implementation Surveys</h2>
 <pre class="r"><code>learning.scales &lt;- raw.data %&gt;% 
   select(starts_with(c(&quot;explore&quot;, &quot;exploit&quot;, &quot;deimplement&quot;)))
 
@@ -1053,12 +1091,8 @@ specific groups of non-respondents, lost interest, or a specific survey
 is less relevant), rather than missing at random.</p>
 </div>
 </div>
-<div id="demographics" class="section level2">
-<h2>2.2 Demographics</h2>
-<div id="section" class="section level3">
-<h3>2.1</h3>
-</div>
-</div>
+<div id="demographics-1" class="section level1">
+<h1>3 Demographics</h1>
 </div>
 
 

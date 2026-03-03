@@ -25,10 +25,26 @@ library(VIM)
 source("helper_functions.R")
 ```
 
+# 1 Outline
 
-# 1 Data checks
+## Scales
 
-## 1.1 Load Data and Initial Inspection
+7-point Likert Scale. 8 = Not Applicable.
+
+1. Check distributions of scores for each item(including 8 and missing). 
+2. Check missing values (percentage missing in each survey item, and missing patterns across all items and all scales).
+  2.1 Explore demographic differences between the missing vs. non-missing groups.
+  2.2 Explore demographic difference between the "actual missing (NA)" group vs. people who chose 8.
+3. Compute mean scores and standard deviations for each item after removing NAs and 8.
+
+## Demographics
+
+1. Attach labels to the demographic dummy variables (i.e. "collapsing" multiple dummies into a categorical variable)
+2. Check distributions
+3. Check missing values and missing patterns
+4. Compute summary statistics
+
+
 
 ```{r load data}
 raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
@@ -36,11 +52,14 @@ raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
 ```
 
 
-## 1.2 Learning Survey Scales
+# 2 Scales
+
+This section checks the distributions and handles missing values for the survey scales, namely, the **Organizational Ambidexterity Survey**, **De-implementation Survey**, Organizational Capacity for Innovation Survey and Organizational Learning Survey.
 
 
+## 2.1 Organizational Ambidexterity Survey - Exploration
 
-### 1.2.1 Organizational Ambidexterity Survey - Exploration
+### 2.1.1 Check distributions
 
 ```{r explore scale answer dist, fig.cap="Distribution of exploration survey scores"}
 raw.data %>% 
@@ -58,13 +77,7 @@ raw.data %>%
   labs(x = "Score", y = "Count")
 ```
 
-
-
-# 2 Explore NA Patterns
-
-## 2.1 Learning Survey Scales
-
-### 2.1.1 Organizational Ambidexterity Survey - Exploration
+### 2.1.2 Check missing and completion rates
 
 ```{r exploration scale missing}
 # check missingness in exploration scale items
@@ -74,7 +87,13 @@ get_missing_stats(data = raw.data, prefix = "explore", caption = "Exploration sc
 
 
 
-### 2.1.2 Organizational Ambidexterity Survey - Exploitation
+## 2.2 Organizational Ambidexterity Survey - Exploitation
+
+### 2.2.1 Check distributions
+
+
+
+### 2.2.2 Check missing and completion rates
 
 ```{r exploitation scale missing}
 # check missingness in exploitation scale items
@@ -82,7 +101,14 @@ get_missing_stats(data = raw.data, prefix = "exploit", caption = "Exploitation s
 ```
 
 
-### 2.1.3 De-implementation Survey
+## 2.3 De-implementation Survey
+
+
+### 2.3.1 Check distributions
+
+
+
+### 2.3.2 Check missing and completion rates
 
 ```{r deimp scale missing}
 # check missingness in exploitation scale items
@@ -90,7 +116,7 @@ get_missing_stats(data = raw.data, prefix = "deimplement", caption = "De-impleme
 ```
 
 
-### 2.1.4 Overall Missing Pattern across Three Scales
+## 2.4 Missingness Pattern across Exploration, Exploitation and De-Implementation Surveys
 
 ```{r scales upset plot, fig.height=12, out.width="100%"}
 learning.scales <- raw.data %>% 
@@ -105,9 +131,9 @@ The Learning Ambidexterity scales and De-implementation scale appear to show hig
   
 This suggests missingness is likely driven by an external factor (ex. specific groups of non-respondents, lost interest, or a specific survey is less relevant), rather than missing at random.
 
-## 2.2 Demographics
+# 3 Demographics
 
-### 2.1 
+
 
 
 
