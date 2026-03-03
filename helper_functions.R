@@ -28,3 +28,18 @@ get_missing_stats <- function(data, prefix, caption){
     kable_styling(bootstrap_options = c("striped", "hover"))
 }
 
+plt_scale_dist <- function(data, prefix, num_col = 3){
+  data %>% 
+    select(starts_with(prefix)) %>% 
+    pivot_longer(
+      cols = everything(),
+      names_to = "item",
+      values_to = "score"
+    ) %>% 
+    mutate(score = factor(score)) %>% 
+    ggplot(aes(x = score)) +
+    geom_bar(fill = "royalblue3", color = "white") +
+    facet_wrap(~item, ncol = num_col) +
+    theme_minimal() +
+    labs(x = "Score", y = "Count")
+}
