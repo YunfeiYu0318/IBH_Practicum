@@ -38,7 +38,9 @@ raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
 
 # 2 Explore NA Patterns
 
-## 2.1 Organizational Ambidexterity Survey - Exploration
+## 2.1 Survey Scales
+
+### 2.1.1 Organizational Ambidexterity Survey - Exploration
 
 ```{r exploration scale missing}
 # check missingness in exploration scale items
@@ -48,7 +50,7 @@ get_missing_stats(data = raw.data, prefix = "explore", caption = "Exploration sc
 
 
 
-## 2.2 Organizational Ambidexterity Survey - Exploitation
+### 2.1.2 Organizational Ambidexterity Survey - Exploitation
 
 ```{r exploitation scale missing}
 # check missingness in exploitation scale items
@@ -56,7 +58,7 @@ get_missing_stats(data = raw.data, prefix = "exploit", caption = "Exploitation s
 ```
 
 
-## 2.3 De-implementation Survey
+### 2.1.3 De-implementation Survey
 
 ```{r deimp scale missing}
 # check missingness in exploitation scale items
@@ -64,8 +66,7 @@ get_missing_stats(data = raw.data, prefix = "deimplement", caption = "De-impleme
 ```
 
 
-
-## 2.4 Overall Missing Pattern across Three Scales
+### 2.1.4 Overall Missing Pattern across Three Scales
 
 ```{r scales upset plot, fig.height=12, out.width="100%"}
 learning.scales <- raw.data %>% 
