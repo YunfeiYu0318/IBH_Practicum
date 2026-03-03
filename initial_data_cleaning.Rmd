@@ -113,7 +113,23 @@ get_missing_stats(data = raw.data, prefix = "deimplement", caption = "De-impleme
 ```
 
 
-## 2.4 Missingness Pattern across Exploration, Exploitation and De-Implementation Surveys
+
+
+
+
+
+
+
+
+# 3 Demographics
+
+## 3.1 Attaching labels to demographic variables
+
+
+
+# 4 Missing Values
+
+## 4.1  Missingness Pattern across Exploration, Exploitation and De-Implementation Surveys
 
 ```{r scales upset plot, fig.height=12, out.width="100%"}
 learning.scales <- raw.data %>% 
@@ -122,16 +138,9 @@ learning.scales <- raw.data %>%
 gg_miss_upset(learning.scales, nsets = ncol(learning.scales))
 ```
 
-
-
 The Learning Ambidexterity scales and De-implementation scale appear to show highly systematic patterns of missingness. The most common pattern is skipping (missing) all questions in all three scales, followed by those who filled out only the exploration survey but missed the exploitation and de-implementation surveys entirely, and finally those who filled out the exploration and exploitation surveys, but not the de-implementation survey.
   
 This suggests missingness is likely driven by an external factor (ex. specific groups of non-respondents, lost interest, or a specific survey is less relevant), rather than missing at random.
-
-# 3 Demographics
-
-
-
 
 
 
