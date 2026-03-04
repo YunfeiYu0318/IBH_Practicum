@@ -220,6 +220,13 @@ The Learning Ambidexterity scales and De-implementation scale appear to show hig
 This suggests missingness is likely driven by an external factor (ex. specific groups of non-respondents, lost interest, or a specific survey is less relevant), rather than missing at random.
 
 
+## 4.2  Missingness Pattern for Demographics
+
+```{r demographic site and role upset plot, fig.height=6, out.width="100%"}
+gg_miss_upset(demog_role %>% select(-record_id), nsets = ncol(learning.scales))
+```
+
+
 
 
 
