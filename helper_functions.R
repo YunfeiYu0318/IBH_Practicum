@@ -2,8 +2,7 @@
 library(dplyr)
 library(tidyverse)
 
-# Check missing value count and percentages
-
+# Check missing value count and percentages for scales
 get_missing_stats <- function(data, prefix, caption){
   # calculate missing stats
   raw.data %>% 
@@ -28,6 +27,8 @@ get_missing_stats <- function(data, prefix, caption){
     kable_styling(bootstrap_options = c("striped", "hover"))
 }
 
+
+# Plot distribution for scale items
 plt_scale_dist <- function(data, prefix, num_col = 3){
   data %>% 
     select(starts_with(prefix)) %>% 
