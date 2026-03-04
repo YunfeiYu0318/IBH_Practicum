@@ -588,7 +588,10 @@ library(kableExtra)
 library(knitr)
 library(skimr)
 library(naniar)
-library(VIM)</code></pre>
+# library(VIM)
+library(gtsummary)
+library(gt)
+library(forcats)</code></pre>
 <pre class="r"><code>source(&quot;helper_functions.R&quot;)</code></pre>
 <div id="outline" class="section level1">
 <h1>1 Outline</h1>
@@ -610,8 +613,8 @@ removing NAs and 8.</li>
 <div id="demographics" class="section level2">
 <h2>Demographics</h2>
 <ol style="list-style-type: decimal">
-<li>Attach labels to the demographic dummy variables (i.e. “collapsing”
-multiple dummies into a categorical variable)</li>
+<li>Attach labels to the demographic (checkbox) dummy variables
+(i.e. “collapsing” multiple dummies into a categorical variable)</li>
 <li>Check distributions</li>
 <li>Check missing values and missing patterns</li>
 <li>Compute summary statistics</li>
@@ -648,6 +651,9 @@ Distribution of exploration survey scores
 <pre class="r"><code># check missingness in exploration scale items
 # get_missing_stats is a helper function from helper_functions.R
 get_missing_stats(data = raw.data, prefix = &quot;explore&quot;, caption = &quot;Exploration scale completion rate&quot;)</code></pre>
+<pre><code>## Warning: &#39;xfun::attr()&#39; is deprecated.
+## Use &#39;xfun::attr2()&#39; instead.
+## See help(&quot;Deprecated&quot;)</code></pre>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Exploration scale completion rate
@@ -816,6 +822,9 @@ Distribution of exploitation survey scores
 <h3>2.2.2 Check missing and completion rates</h3>
 <pre class="r"><code># check missingness in exploitation scale items
 get_missing_stats(data = raw.data, prefix = &quot;exploit&quot;, caption = &quot;Exploitation scale completion rate&quot;)</code></pre>
+<pre><code>## Warning: &#39;xfun::attr()&#39; is deprecated.
+## Use &#39;xfun::attr2()&#39; instead.
+## See help(&quot;Deprecated&quot;)</code></pre>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 Exploitation scale completion rate
@@ -970,6 +979,9 @@ Distribution of deimplementation survey scores
 <h3>2.3.2 Check missing and completion rates</h3>
 <pre class="r"><code># check missingness in exploitation scale items
 get_missing_stats(data = raw.data, prefix = &quot;deimplement&quot;, caption = &quot;De-implementation scale completion rate&quot;)</code></pre>
+<pre><code>## Warning: &#39;xfun::attr()&#39; is deprecated.
+## Use &#39;xfun::attr2()&#39; instead.
+## See help(&quot;Deprecated&quot;)</code></pre>
 <table class="table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <caption>
 De-implementation scale completion rate
@@ -1082,10 +1094,8 @@ deimplement_def2
 </div>
 <div id="demographics-1" class="section level1">
 <h1>3 Demographics</h1>
-<div id="attaching-labels-to-demographic-variables" class="section level2">
-<h2>3.1 Attaching labels to demographic variables</h2>
-<div id="demographics---site-and-role" class="section level3">
-<h3>Demographics - Site and Role</h3>
+<div id="site-and-role" class="section level2">
+<h2>3.1 Site and Role</h2>
 <ul>
 <li><p>Primary site <code>site_oath_v2</code>: categorical
 (factor)</p></li>
@@ -1100,6 +1110,545 @@ categorical (factor)</p></li>
 categorical (factor)</p></li>
 <li><p>Have academic appoint <code>academic_appt</code>: binary</p></li>
 </ul>
+<pre class="r"><code>demog_role &lt;- raw.data %&gt;% 
+  select(record_id, site_oath_v2, role_oath_v2, years_role_oath_v2, 
+         years_employed_thp_v2, academic_appt) %&gt;% 
+  # convert to factor and attach text labels for summary
+  mutate(
+    site_oath_v2 = factor(site_oath_v2,
+                          levels = c(1, 2, 3, 4),
+                          labels = c(&quot;Credit Valley Hospital&quot;, 
+                                     &quot;Missisauga Hospital&quot;, 
+                                     &quot;Queensway Health Centre&quot;, 
+                                     &quot;Other&quot;)
+                          ),
+    role_oath_v2 = factor(role_oath_v2,
+                          levels = c(1, 2, 3, 4, 5, 6, 7),
+                          labels = c(&quot;Administrative/Consultant&quot;,
+                                     &quot;Director&quot;,
+                                     &quot;Manager&quot;,
+                                     &quot;Professional Staff&quot;,
+                                     &quot;Senior Leadership&quot;,
+                                     &quot;Supervisor/Team Leader&quot;,
+                                     &quot;Other&quot;)
+                          ),
+    years_role_oath_v2 = factor(years_role_oath_v2,
+                                levels = c(1, 2, 3, 4, 5),
+                                labels = c(&quot;&lt; 1 year&quot;,
+                                           &quot;1-3 years&quot;,
+                                           &quot;3-6 years&quot;,
+                                           &quot;6-9 years&quot;,
+                                           &quot;10+ years&quot;)
+                                ),
+    years_employed_thp_v2 = factor(years_employed_thp_v2,
+                                   levels = c(1, 2, 3, 4, 5),
+                                   labels = c(&quot;&lt; 1 year&quot;,
+                                              &quot;1-3 years&quot;,
+                                              &quot;3-6 years&quot;,
+                                              &quot;6-9 years&quot;,
+                                              &quot;10+ years&quot;)
+                                   ),
+    academic_appt = factor(academic_appt,
+                           levels = c(1, 0),
+                           labels = c(&quot;Yes&quot;, &quot;No&quot;))
+  )</code></pre>
+<pre class="r"><code># demog %&gt;%
+#   select(-record_id) %&gt;%
+#   tbl_summary(
+#     missing = &quot;always&quot;,
+#     missing_text = &quot;Missing&quot;,
+#     statistic = list(
+#       all_categorical() ~ &quot;{n} ({p}%)&quot;
+#     )
+#   ) %&gt;%
+#   bold_labels() %&gt;%
+#   modify_caption(&quot;Summary statistics for site and role variables&quot;) %&gt;%
+#   as_gt() %&gt;%
+#   tab_options(table.width = pct(100))
+
+# Missings are treated as an explicit category only for reporting
+get_category_summary(demog_role,
+                     caption = &quot;Summary statistics (n (%)) for site and role variables&quot;,
+                     id = &quot;record_id&quot;)</code></pre>
+<div id="asamapaqyl" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#asamapaqyl table {
+font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
+}
+#asamapaqyl thead, #asamapaqyl tbody, #asamapaqyl tfoot, #asamapaqyl tr, #asamapaqyl td, #asamapaqyl th {
+border-style: none;
+}
+#asamapaqyl p {
+margin: 0;
+padding: 0;
+}
+#asamapaqyl .gt_table {
+display: table;
+border-collapse: collapse;
+line-height: normal;
+margin-left: auto;
+margin-right: auto;
+color: #333333;
+font-size: 16px;
+font-weight: normal;
+font-style: normal;
+background-color: #FFFFFF;
+width: 100%;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #A8A8A8;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #A8A8A8;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+}
+#asamapaqyl .gt_caption {
+padding-top: 4px;
+padding-bottom: 4px;
+}
+#asamapaqyl .gt_title {
+color: #333333;
+font-size: 125%;
+font-weight: initial;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-color: #FFFFFF;
+border-bottom-width: 0;
+}
+#asamapaqyl .gt_subtitle {
+color: #333333;
+font-size: 85%;
+font-weight: initial;
+padding-top: 3px;
+padding-bottom: 5px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-color: #FFFFFF;
+border-top-width: 0;
+}
+#asamapaqyl .gt_heading {
+background-color: #FFFFFF;
+text-align: center;
+border-bottom-color: #FFFFFF;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#asamapaqyl .gt_bottom_border {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#asamapaqyl .gt_col_headings {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#asamapaqyl .gt_col_heading {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+overflow-x: hidden;
+}
+#asamapaqyl .gt_column_spanner_outer {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+padding-top: 0;
+padding-bottom: 0;
+padding-left: 4px;
+padding-right: 4px;
+}
+#asamapaqyl .gt_column_spanner_outer:first-child {
+padding-left: 0;
+}
+#asamapaqyl .gt_column_spanner_outer:last-child {
+padding-right: 0;
+}
+#asamapaqyl .gt_column_spanner {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 5px;
+overflow-x: hidden;
+display: inline-block;
+width: 100%;
+}
+#asamapaqyl .gt_spanner_row {
+border-bottom-style: hidden;
+}
+#asamapaqyl .gt_group_heading {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+text-align: left;
+}
+#asamapaqyl .gt_empty_group_heading {
+padding: 0.5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: middle;
+}
+#asamapaqyl .gt_from_md > :first-child {
+margin-top: 0;
+}
+#asamapaqyl .gt_from_md > :last-child {
+margin-bottom: 0;
+}
+#asamapaqyl .gt_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+margin: 10px;
+border-top-style: solid;
+border-top-width: 1px;
+border-top-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+overflow-x: hidden;
+}
+#asamapaqyl .gt_stub {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+}
+#asamapaqyl .gt_stub_row_group {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+vertical-align: top;
+}
+#asamapaqyl .gt_row_group_first td {
+border-top-width: 2px;
+}
+#asamapaqyl .gt_row_group_first th {
+border-top-width: 2px;
+}
+#asamapaqyl .gt_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#asamapaqyl .gt_first_summary_row {
+border-top-style: solid;
+border-top-color: #D3D3D3;
+}
+#asamapaqyl .gt_first_summary_row.thick {
+border-top-width: 2px;
+}
+#asamapaqyl .gt_last_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#asamapaqyl .gt_grand_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#asamapaqyl .gt_first_grand_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-style: double;
+border-top-width: 6px;
+border-top-color: #D3D3D3;
+}
+#asamapaqyl .gt_last_grand_summary_row_top {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: double;
+border-bottom-width: 6px;
+border-bottom-color: #D3D3D3;
+}
+#asamapaqyl .gt_striped {
+background-color: rgba(128, 128, 128, 0.05);
+}
+#asamapaqyl .gt_table_body {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#asamapaqyl .gt_footnotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#asamapaqyl .gt_footnote {
+margin: 0px;
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#asamapaqyl .gt_sourcenotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#asamapaqyl .gt_sourcenote {
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#asamapaqyl .gt_left {
+text-align: left;
+}
+#asamapaqyl .gt_center {
+text-align: center;
+}
+#asamapaqyl .gt_right {
+text-align: right;
+font-variant-numeric: tabular-nums;
+}
+#asamapaqyl .gt_font_normal {
+font-weight: normal;
+}
+#asamapaqyl .gt_font_bold {
+font-weight: bold;
+}
+#asamapaqyl .gt_font_italic {
+font-style: italic;
+}
+#asamapaqyl .gt_super {
+font-size: 65%;
+}
+#asamapaqyl .gt_footnote_marks {
+font-size: 75%;
+vertical-align: 0.4em;
+position: initial;
+}
+#asamapaqyl .gt_asterisk {
+font-size: 100%;
+vertical-align: 0;
+}
+#asamapaqyl .gt_indent_1 {
+text-indent: 5px;
+}
+#asamapaqyl .gt_indent_2 {
+text-indent: 10px;
+}
+#asamapaqyl .gt_indent_3 {
+text-indent: 15px;
+}
+#asamapaqyl .gt_indent_4 {
+text-indent: 20px;
+}
+#asamapaqyl .gt_indent_5 {
+text-indent: 25px;
+}
+#asamapaqyl .katex-display {
+display: inline-flex !important;
+margin-bottom: 0.75em !important;
+}
+#asamapaqyl div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+height: 0px !important;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <caption><span class="gt_from_md">Summary statistics (n (%)) for site and role variables</span></caption>
+  <thead>
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="label"><span class="gt_from_md"><strong>Characteristic</strong></span></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="stat_0"><span class="gt_from_md"><strong>N = 231</strong></span><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;line-height:0;"><sup>1</sup></span></th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="label" class="gt_row gt_left" style="font-weight: bold;">site_oath_v2</td>
+<td headers="stat_0" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Credit Valley Hospital</td>
+<td headers="stat_0" class="gt_row gt_center">79 (34%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Missisauga Hospital</td>
+<td headers="stat_0" class="gt_row gt_center">72 (31%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Queensway Health Centre</td>
+<td headers="stat_0" class="gt_row gt_center">11 (4.8%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Other</td>
+<td headers="stat_0" class="gt_row gt_center">50 (22%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Missing</td>
+<td headers="stat_0" class="gt_row gt_center">19 (8.2%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left" style="font-weight: bold;">role_oath_v2</td>
+<td headers="stat_0" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Administrative/Consultant</td>
+<td headers="stat_0" class="gt_row gt_center">12 (5.2%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Director</td>
+<td headers="stat_0" class="gt_row gt_center">42 (18%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Manager</td>
+<td headers="stat_0" class="gt_row gt_center">74 (32%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Professional Staff</td>
+<td headers="stat_0" class="gt_row gt_center">27 (12%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Senior Leadership</td>
+<td headers="stat_0" class="gt_row gt_center">12 (5.2%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Supervisor/Team Leader</td>
+<td headers="stat_0" class="gt_row gt_center">34 (15%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Other</td>
+<td headers="stat_0" class="gt_row gt_center">11 (4.8%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Missing</td>
+<td headers="stat_0" class="gt_row gt_center">19 (8.2%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left" style="font-weight: bold;">years_role_oath_v2</td>
+<td headers="stat_0" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    &lt; 1 year</td>
+<td headers="stat_0" class="gt_row gt_center">47 (20%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    1-3 years</td>
+<td headers="stat_0" class="gt_row gt_center">74 (32%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    3-6 years</td>
+<td headers="stat_0" class="gt_row gt_center">40 (17%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    6-9 years</td>
+<td headers="stat_0" class="gt_row gt_center">24 (10%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    10+ years</td>
+<td headers="stat_0" class="gt_row gt_center">28 (12%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Missing</td>
+<td headers="stat_0" class="gt_row gt_center">18 (7.8%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left" style="font-weight: bold;">years_employed_thp_v2</td>
+<td headers="stat_0" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    &lt; 1 year</td>
+<td headers="stat_0" class="gt_row gt_center">13 (5.6%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    1-3 years</td>
+<td headers="stat_0" class="gt_row gt_center">27 (12%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    3-6 years</td>
+<td headers="stat_0" class="gt_row gt_center">36 (16%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    6-9 years</td>
+<td headers="stat_0" class="gt_row gt_center">40 (17%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    10+ years</td>
+<td headers="stat_0" class="gt_row gt_center">97 (42%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Missing</td>
+<td headers="stat_0" class="gt_row gt_center">18 (7.8%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left" style="font-weight: bold;">academic_appt</td>
+<td headers="stat_0" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Yes</td>
+<td headers="stat_0" class="gt_row gt_center">53 (23%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    No</td>
+<td headers="stat_0" class="gt_row gt_center">159 (69%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Missing</td>
+<td headers="stat_0" class="gt_row gt_center">19 (8.2%)</td></tr>
+  </tbody>
+  
+  <tfoot class="gt_footnotes">
+    <tr>
+      <td class="gt_footnote" colspan="2"><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;line-height:0;"><sup>1</sup></span> <span class="gt_from_md">n (%)</span></td>
+    </tr>
+  </tfoot>
+</table>
 </div>
 </div>
 </div>
