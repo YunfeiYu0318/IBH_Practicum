@@ -618,6 +618,9 @@ multiple dummies into a categorical variable)</li>
 </ol>
 <pre class="r"><code>raw.data &lt;- read_excel(&quot;Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx&quot;)
 # raw.data %&gt;% skim()</code></pre>
+<pre class="r"><code># check for any duplicates in record id
+nrow(raw.data) == n_distinct(raw.data$record_id)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 </div>
 </div>
 <div id="scales-1" class="section level1">

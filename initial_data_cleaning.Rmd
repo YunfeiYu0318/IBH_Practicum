@@ -45,11 +45,16 @@ source("helper_functions.R")
 4. Compute summary statistics
 
 
-
 ```{r load data}
 raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
 # raw.data %>% skim()
 ```
+
+```{r unique identifier check}
+# check for any duplicates in record id
+nrow(raw.data) == n_distinct(raw.data$record_id)
+```
+
 
 # 2 Scales
 
