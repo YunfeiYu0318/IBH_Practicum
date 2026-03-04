@@ -51,7 +51,6 @@ raw.data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx")
 # raw.data %>% skim()
 ```
 
-
 # 2 Scales
 
 This section checks the distributions and handles missing values for the survey scales, namely, the **Organizational Ambidexterity Survey**, **De-implementation Survey**, Organizational Capacity for Innovation Survey and Organizational Learning Survey.
@@ -113,17 +112,23 @@ get_missing_stats(data = raw.data, prefix = "deimplement", caption = "De-impleme
 ```
 
 
-
-
-
-
-
-
-
-
 # 3 Demographics
 
 ## 3.1 Attaching labels to demographic variables
+
+### Demographics - Site and Role
+
+- Primary site `site_oath_v2`: categorical (factor)
+
+- Role `role_oath_v2`: categorical (factor)
+
+  - `role_oath_spec` if `role_oath_v2` = 7: text
+  
+- Number of years in current role `years_role_oath_v2`: categorical (factor)
+
+- Number of years at THP `years_employed_thp_v2`: categorical (factor)
+
+- Have academic appoint `academic_appt`: binary
 
 
 
