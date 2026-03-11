@@ -245,8 +245,40 @@ labelled.data <- labelled.data %>%
 
   
   
+```{r checkbox demog gender and sex}
+# convert checkbox variables (dummies) to categorical
+# i.e. gender, sexual orientation, language, race
+
+# check if gender and sexual orientation is MC or choose all apply
+gender_sex <- raw.data %>% 
+  select(record_id, contains("gender"), contains("sex")) %>% 
+  mutate(gender_sum = rowSums(pick(starts_with("gender_"))),
+         sex_sum = rowSums(pick(starts_with("sexual_"))))
+
+# summary table
+get_category_summary(gender_sex %>%
+                       select(gender_sum, sex_sum) %>% 
+                       mutate(gender_sum = as.factor(gender_sum),
+                              sex_sum = as.factor(sex_sum)), 
+                     caption = "")
+
+
+
+
+# if gender = 5, and if self-define is empty ~ other; if self-define not empty ~ self-defined text
+
+```
   
-  
+Gender and sexual orientation are multiple choice in nature (rather than "select all that apply"), except for one person who chose more than one sexual orientation. Some participants did not select any categories for gender and sexual orientations.
+
+```{r sexual orientation check}
+# check the one person who choose more than 1 sexual orientation
+gender_sex %>% 
+  filter(sex_sum > 1)
+
+# check people who did not choose any category
+```
+
 
 # 4 Missing Values
 
