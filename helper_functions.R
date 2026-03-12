@@ -51,6 +51,28 @@ plt_scale_dist <- function(data, prefix, num_col = 3){
 
 
 # Summary stats for categorical variables (n and percentage)
+# get_category_summary <- function(data, caption, id = NULL){
+#   
+#   if(!is.null(id)){
+#     data <- data %>% select(-any_of(id))
+#   }
+#   
+#   data %>% 
+#     mutate(across(where(is.factor), ~fct_na_value_to_level(.x, level = "Missing"))) %>% 
+#     tbl_summary(
+#       missing = "no", # NAs treated as an explicit category
+#       # missing_text = "Missing",
+#       # missing_stat = "{n} ({p}%)",
+#       statistic = list(
+#         all_categorical() ~ "{n} ({p}%)"
+#       )
+#     ) %>% 
+#     bold_labels() %>% 
+#     modify_caption(caption) %>% 
+#     as_gt() %>% 
+#     tab_options(table.width = pct(100))
+# }
+
 get_category_summary <- function(data, caption, id = NULL){
   
   if(!is.null(id)){
@@ -58,7 +80,7 @@ get_category_summary <- function(data, caption, id = NULL){
   }
   
   data %>% 
-    mutate(across(where(is.factor), ~fct_na_value_to_level(.x, level = "Missing"))) %>% 
+    mutate(across(everything(), ~fct_na_value_to_level(.x, level = "Missing"))) %>% 
     tbl_summary(
       missing = "no", # NAs treated as an explicit category
       # missing_text = "Missing",
