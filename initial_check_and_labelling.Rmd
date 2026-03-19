@@ -268,9 +268,7 @@ labelled.data <- labelled.data %>%
 
 # summary table
 get_category_summary(labelled.data %>%
-                       select(gender_sum, sex_sum) %>% 
-                       mutate(gender_sum = as.factor(gender_sum),
-                              sex_sum = as.factor(sex_sum)), 
+                       select(gender_sum, sex_sum),
                      caption = "Total score for gender and sexual orientation")
 
 
@@ -302,9 +300,7 @@ labelled.data %>%
 
 ```{r check gender and sex self define}
 get_category_summary(labelled.data %>%
-                       select(self_define_gender, self_define_sex1) %>% 
-                       mutate(self_define_gender = as.factor(self_define_gender),
-                              self_define_sex1 = as.factor(self_define_sex1)), 
+                       select(self_define_gender, self_define_sex1), 
                      caption = "Self-defined gender and sexual orientation missing rate")
 # No one self-defined gender or sexual orientation
 ```
@@ -365,9 +361,7 @@ labelled.data <- labelled.data %>%
   )
 
 get_category_summary(labelled.data %>%
-                       select(num_language, num_race) %>% 
-                       mutate(num_language = as.factor(num_language),
-                              num_race = as.factor(num_race)), 
+                       select(num_language, num_race), 
                      caption = "Number of language / race")
 ```
 
@@ -381,16 +375,18 @@ labelled.data <- labelled.data %>%
          race_spec = as.factor(str_to_title(race_spec)))
 
 get_category_summary(labelled.data %>%
-                       select(language_specify_oath_v2, race_spec) %>%
-                       mutate(language_specify_oath_v2 = as.factor(language_specify_oath_v2),
-                              language_specify_oath_v2 = as.factor(language_specify_oath_v2)),
+                       select(language_specify_oath_v2, race_spec),
                      caption = "Self-defined language and race missing rate")
 ```
 
 
-```{r clean self defined race}
-# clean self-defined race
-# combine South Asian, West Indian, and Indo-Caribbean to Asian ?
+```{r labelling language}
+# for dimension reduction, keep the top 5 most spoken language and combine all others into "other"
+
+# check frequency
+get_category_summary(labelled.data %>%
+                       select(starts_with("language_oath")),
+                     caption = "Frequency of language spoken")
 
 ```
 

@@ -79,7 +79,8 @@ get_category_summary <- function(data, caption, id = NULL){
     data <- data %>% select(-any_of(id))
   }
   
-  data %>% 
+  data %>%
+    mutate(across(everything(), as.factor)) %>% 
     mutate(across(everything(), ~fct_na_value_to_level(.x, level = "Missing"))) %>% 
     tbl_summary(
       missing = "no", # NAs treated as an explicit category
