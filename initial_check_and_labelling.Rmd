@@ -312,10 +312,12 @@ get_category_summary(labelled.data %>%
 
 ```{r labelling gender and sex}
 # convert checkbox gender and sexual orientation to factor
+# if selecting more than 1 gender/sexual orientation -> treat as missing
+
 labelled.data <- labelled.data %>% 
   mutate(
     gender_oath_v2 = case_when(
-      gender_sum > 1 ~ "Unknown",
+      gender_sum > 1 ~ NA,
       gender_oath_v2___1 == 1 ~ "Woman",
       gender_oath_v2___2 == 1 ~ "Man",
       gender_oath_v2___3 == 1 ~ "Trans",
@@ -325,7 +327,7 @@ labelled.data <- labelled.data %>%
       TRUE ~ NA
     ),
     sexual_orient_oath_v2 = case_when(
-      sex_sum > 1 ~ "Unknown", # who chose more than 1 sexual orientation
+      sex_sum > 1 ~ NA, # who chose more than 1 sexual orientation
       sexual_orient_oath_v2___1 == 1 ~ "Gay",
       sexual_orient_oath_v2___2 == 1 ~ "Lesbian",
       sexual_orient_oath_v2___3 == 1 ~ "Straight/Heterosexual",
@@ -336,7 +338,11 @@ labelled.data <- labelled.data %>%
       sexual_orient_oath_v2___8 == 1 ~ "Prefer not to answer",
       TRUE ~ NA
     )
-  )
+  ) %>% 
+  # drop original cols
+  select(-starts_with(c("gender_oath_v2___", "sexual_orient_oath_v2___"))) %>% 
+  # drop sum cols
+  select(-c(sex_sum, gender_sum))
 ```
 
 
