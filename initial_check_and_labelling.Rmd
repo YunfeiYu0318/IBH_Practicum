@@ -36,17 +36,16 @@ source("helper_functions.R")
 7-point Likert Scale. 8 = Not Applicable.
 
 1. Check distributions of scores for each item (including 8 and missing). 
-2. Check missing values (percentage missing in each survey item, and missing patterns across all items and all scales).
-  2.1 Explore demographic differences between the missing vs. non-missing groups.
-  2.2 Explore demographic difference between the "actual missing (NA)" group vs. people who chose 8.
-3. Compute mean scores and standard deviations for each item after removing NAs and 8.
+
+2. Compute mean scores and standard deviations for each item after removing NAs and 8.
 
 ## Demographics
 
-1. Attach labels to the demographic (checkbox) dummy variables (i.e. "collapsing" multiple dummies into a categorical variable)
-2. Check distributions
-3. Check missing values and missing patterns
-4. Compute summary statistics
+1. Attach labels to the demographic variables
+  a. For MC: convert multiple dummies to one factor variable
+  b. For checkbox: explore ways for dimension reduction (e.g., combining groups)
+2. Check distributions and summary statistics
+
 
 
 ```{r load data}
@@ -530,38 +529,23 @@ labelled.data %>%
 ```
 
 
+**Note**: decide whether to combine South Asian and West Indian into the broader "Asian" category.
 
-# 4 Missing Values
+```{r clean up specified race}
+# labelled.data %>% 
+#   filter(!is.na(race_spec)) %>% 
+#   select(record_id, starts_with("race_"))
+```
 
-## 4.1 Row-wise Missing
+
 
 ```{r}
-# check missing percentage (completion rate) for each observation
+# glimpse(labelled.data)
 ```
 
-
-## 4.2 Missingness Pattern across Exploration, Exploitation and De-Implementation Surveys
-
-```{r scales upset plot, fig.height=12, out.width="100%"}
-learning.scales <- labelled.data %>% 
-  select(starts_with(c("explore", "exploit", "deimplement")))
-
-gg_miss_upset(learning.scales, nsets = ncol(learning.scales))
+```{r export data}
+write_csv(labelled.data, "Data/OATH_DATA_Labelled.csv")
 ```
-
-The Learning Ambidexterity scales and De-implementation scale appear to show highly systematic patterns of missingness. The most common pattern is skipping (missing) all questions in all three scales, followed by those who filled out only the exploration survey but missed the exploitation and de-implementation surveys entirely, and finally those who filled out the exploration and exploitation surveys, but not the de-implementation survey.
-  
-This suggests missingness is likely driven by an external factor (ex. specific groups of non-respondents, lost interest, or a specific survey is less relevant), rather than missing at random.
-
-
-## 4.3  Missingness Pattern for Demographics
-
-```{r demographic site and role upset plot, fig.height=6, out.width="100%"}
-demog_role <- labelled.data %>% 
-  select(site_oath_v2, role_oath_v2, years_role_oath_v2, years_employed_thp_v2, academic_appt)
-gg_miss_upset(demog_role, nsets = ncol(learning.scales))
-```
-
 
 
 
