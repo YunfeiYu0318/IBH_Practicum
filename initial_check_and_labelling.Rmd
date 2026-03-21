@@ -379,15 +379,154 @@ get_category_summary(labelled.data %>%
                      caption = "Self-defined language and race missing rate")
 ```
 
+#### Language
 
 ```{r labelling language}
 # for dimension reduction, keep the top 5 most spoken language and combine all others into "other"
+
+# rename language cols
+labelled.data <- labelled.data %>% 
+  rename(
+    language_oath_v2_English = language_oath_v2___1,
+    language_oath_v2_French = language_oath_v2___2,
+    language_oath_v2_Indigenous = language_oath_v2___3,
+    language_oath_v2_Mandarin = language_oath_v2___4,
+    language_oath_v2_Cantonese = language_oath_v2___5,
+    language_oath_v2_Punjabi = language_oath_v2___6,
+    language_oath_v2_Hindi = language_oath_v2___7,
+    language_oath_v2_Urdu = language_oath_v2___8,
+    language_oath_v2_Spanish = language_oath_v2___9,
+    language_oath_v2_Portuguese = language_oath_v2___10,
+    language_oath_v2_Tagalog = language_oath_v2___11,
+    language_oath_v2_Vietnamese = language_oath_v2___12,
+    language_oath_v2_Arabic = language_oath_v2___13,
+    language_oath_v2_ASL = language_oath_v2___14,
+    language_oath_v2_LSQ = language_oath_v2___15,
+    language_oath_v2_Other = language_oath_v2___16,
+    language_oath_v2_PNA = language_oath_v2___17,
+  )
 
 # check frequency
 get_category_summary(labelled.data %>%
                        select(starts_with("language_oath")),
                      caption = "Frequency of language spoken")
 
+```
+
+```{r check language frequency}
+# check frequency
+labelled.data %>% 
+  select(starts_with("language_oath_v2")) %>% 
+  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
+  pivot_longer(everything(),
+               names_to = "Language",
+               values_to = "Percentage") %>% 
+  mutate(Language = str_remove(Language, "language_oath_v2_")) %>% 
+  filter(Language != "Other" & Language != "PNA") %>% # excluding other and PNA in the ranking
+  arrange(desc(Percentage)) %>% 
+  head(5) %>% 
+  # create html table
+  kable(digits = 2,
+        col.names = c("Language", "Frequency (%)"),
+        caption = "Top 5 most spoken language",
+        format = "html") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+```{r combine less spoken languages into other}
+# For languages that are not among the top 5 most spoken,
+# combine into the "Other" category
+
+# The new "Other" category: 1 if any of the languages other than the top 5 and PNA is 1, 0 otherwise
+
+pattern <- "English|French|Hindi|Cantonese|Punjabi|PNA"
+languages.other <- labelled.data %>%
+  select(starts_with("language_oath_v2") & !matches(pattern), language_specify_oath_v2) %>% 
+  names()
+
+labelled.data <- labelled.data %>% 
+  mutate(language_oath_v2_AllOther = if_else(
+    # any of the 'other' columns are 1 (ignoring NAs)
+    if_any(all_of(languages.other), ~ .x == 1 & !is.na(.x)) | 
+    # the specify column is not NA
+    !is.na(language_specify_oath_v2), 
+    1, 0, 
+    missing = 0
+  )) %>% 
+  select(-languages.other)
+
+# sanity check if language_oath_v2_AllOther is created correctly
+# labelled.data %>%
+#   select(languages.other, language_oath_v2_AllOther) %>%
+#   mutate(language_specify_oath_v2 = if_else(is.na(language_specify_oath_v2), 0, 1)) %>% 
+#   # calculate row sum
+#   mutate(check = if_else(rowSums(across(languages.other)) == 0, 0, 1)) %>% 
+#   summarise(n_incorrect = sum(language_oath_v2_AllOther != check))
+
+
+```
+
+```{r check language freq after combining}
+# check frequency
+labelled.data %>% 
+  select(starts_with("language_oath_v2")) %>% 
+  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
+  pivot_longer(everything(),
+               names_to = "Language",
+               values_to = "Percentage") %>% 
+  mutate(Language = str_remove(Language, "language_oath_v2_")) %>% 
+  arrange(desc(Percentage)) %>%
+  # create html table
+  kable(digits = 2,
+        col.names = c("Language", "Frequency (%)"),
+        caption = "Language frequency after combining categories",
+        format = "html") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+#### Race
+
+```{r labelling race}
+# for dimension reduction, keep the top 5 most frequent race and combine all others into "other"
+
+# rename language cols
+labelled.data <- labelled.data %>% 
+  rename(
+    race_oath_v2_Asian = race_oath_v2___1,
+    race_oath_v2_Black = race_oath_v2___2,
+    race_oath_v2_LatinHispanic = race_oath_v2___3,
+    race_oath_v2_MiddleEastern = race_oath_v2___4,
+    race_oath_v2_Mixed = race_oath_v2___5,
+    race_oath_v2_White = race_oath_v2___6,
+    race_oath_v2_Other = race_oath_v2___7,
+    race_oath_v2_PNA = race_oath_v2___8,
+  )
+
+# check frequency
+get_category_summary(labelled.data %>%
+                       select(starts_with("race_oath")),
+                     caption = "Frequency of race")
+
+```
+
+```{r check race frequency}
+# check frequency
+labelled.data %>% 
+  select(starts_with("race_oath_v2")) %>% 
+  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
+  pivot_longer(everything(),
+               names_to = "Race",
+               values_to = "Percentage") %>% 
+  mutate(Race = str_remove(Race, "race_oath_v2_")) %>% 
+  # filter(Race != "Other" & Race != "PNA") %>% # excluding other and PNA in the ranking
+  arrange(desc(Percentage)) %>% 
+  # head(5) %>% 
+  # create html table
+  kable(digits = 2,
+        col.names = c("Race", "Frequency (%)"),
+        caption = "Race frequency",
+        format = "html") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 
