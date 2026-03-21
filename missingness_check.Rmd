@@ -1,0 +1,83 @@
+---
+title: "missingness_check"
+author: "Yunfei Yu, 1005976918"
+date: "2026-03-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r libraries, message=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+library(skimr)
+library(naniar)
+# library(VIM)
+library(gtsummary)
+library(gt)
+library(forcats)
+library(stringr)
+```
+
+```{r import helper functions, message=FALSE}
+source("helper_functions.R")
+```
+
+```{r load labelled data, message=FALSE}
+oath_data <- read_csv("Data/OATH_DATA_Labelled.csv")
+dim(oath_data)
+```
+
+# 1 Outline
+
+1. Check row-wise and column-wise missing / completion rate
+
+2. Explore missing patterns by variable group
+
+  a. Items in each scale
+  
+  b. Demographics
+  
+3. Focusing on Exploration, Exploitation and De-implementation scales:
+
+  a. Explore demographic differences between missing and non-missing groups
+
+  b. Explore the differences between "actual missing"  (NA, who did not complete the question) and people who chose 8
+
+
+# 2 Row-wise Missing and Completion Rate
+
+
+```{r}
+# check missing percentage (completion rate) for each observation
+```
+
+
+## 4.2 Missingness Pattern across Exploration, Exploitation and De-Implementation Surveys
+
+```{r scales upset plot, fig.height=12, out.width="100%"}
+learning.scales <- labelled.data %>% 
+  select(starts_with(c("explore", "exploit", "deimplement")))
+
+gg_miss_upset(learning.scales, nsets = ncol(learning.scales))
+```
+
+The Learning Ambidexterity scales and De-implementation scale appear to show highly systematic patterns of missingness. The most common pattern is skipping (missing) all questions in all three scales, followed by those who filled out only the exploration survey but missed the exploitation and de-implementation surveys entirely, and finally those who filled out the exploration and exploitation surveys, but not the de-implementation survey.
+  
+This suggests missingness is likely driven by an external factor (ex. specific groups of non-respondents, lost interest, or a specific survey is less relevant), rather than missing at random.
+
+
+## 4.3  Missingness Pattern for Demographics
+
+```{r demographic site and role upset plot, fig.height=6, out.width="100%"}
+demog_role <- labelled.data %>% 
+  select(site_oath_v2, role_oath_v2, years_role_oath_v2, years_employed_thp_v2, academic_appt)
+gg_miss_upset(demog_role, nsets = ncol(learning.scales))
+```
