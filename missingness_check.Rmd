@@ -50,6 +50,8 @@ dim(oath_data)
   a. Explore demographic differences between missing and non-missing groups
 
   b. Explore the differences between "actual missing"  (NA, who did not complete the question) and people who chose 8
+  
+4. Based on 3b, decide whether to treat 8 as actual missing and drop, or treat as a distinct category and keep in subsequent analysis
 
 
 # 2 Row-wise Missing and Completion Rate
