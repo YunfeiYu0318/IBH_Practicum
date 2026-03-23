@@ -98,10 +98,27 @@ gg_miss_upset(org_scales, nsets = ncol(org_scales), mb.ratio = c(0.3, 0.7))
 ```
 
 
-## 4.3  Missingness Pattern for Demographics
+## 4.3  Missingness pattern for demographics
 
-```{r demographic site and role upset plot, fig.height=6, out.width="100%"}
-demog_role <- labelled.data %>% 
+### 4.3.1 Site and Role
+
+```{r demographic site and role upset plot, fig.height=4, out.width="100%"}
+demog_role <- oath_data %>% 
   select(site_oath_v2, role_oath_v2, years_role_oath_v2, years_employed_thp_v2, academic_appt)
-gg_miss_upset(demog_role, nsets = ncol(learning.scales))
+gg_miss_upset(demog_role, nsets = ncol(demog_role),  mb.ratio = c(0.5, 0.5))
 ```
+
+### 4.3.2 Patient characteristics
+
+```{r demographic characteristics upset plot, fig.height=6, out.width="100%"}
+demog_char <- oath_data %>% 
+  select(age_oath_v2, gender_oath_v2, sexual_orient_oath_v2, disability_oath_v2, indigenous_oath_v2, 
+         poc_oath_v2, starts_with(c("language", "race")))
+gg_miss_upset(demog_char, nsets = ncol(demog_char),  mb.ratio = c(0.3, 0.7))
+```
+
+
+
+
+
+
