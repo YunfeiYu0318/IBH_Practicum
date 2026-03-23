@@ -441,23 +441,8 @@ get_category_summary(labelled.data %>%
 ```
 
 ```{r check language frequency}
-# check frequency
-labelled.data %>% 
-  select(starts_with("language_oath_v2")) %>% 
-  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
-  pivot_longer(everything(),
-               names_to = "Language",
-               values_to = "Percentage") %>% 
-  mutate(Language = str_remove(Language, "language_oath_v2_")) %>% 
-  filter(Language != "Other" & Language != "PNA") %>% # excluding other and PNA in the ranking
-  arrange(desc(Percentage)) %>% 
-  head(5) %>% 
-  # create html table
-  kable(digits = 2,
-        col.names = c("Language", "Frequency (%)"),
-        caption = "Top 5 most spoken language",
-        format = "html") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"))
+get_checkbox_summary(labelled.data, prefix = "language_oath_v2", 
+                     caption = "Top 5 most spoken language")
 ```
 
 ```{r combine less spoken languages into other}
@@ -494,21 +479,8 @@ labelled.data <- labelled.data %>%
 ```
 
 ```{r check language freq after combining}
-# check frequency
-labelled.data %>% 
-  select(starts_with("language_oath_v2")) %>% 
-  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
-  pivot_longer(everything(),
-               names_to = "Language",
-               values_to = "Percentage") %>% 
-  mutate(Language = str_remove(Language, "language_oath_v2_")) %>% 
-  arrange(desc(Percentage)) %>%
-  # create html table
-  kable(digits = 2,
-        col.names = c("Language", "Frequency (%)"),
-        caption = "Language frequency after combining categories",
-        format = "html") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"))
+get_checkbox_summary(labelled.data, prefix = "language_oath_v2", 
+                     caption = "Language frequency after combining categories")
 ```
 
 #### Race
@@ -534,26 +506,6 @@ get_category_summary(labelled.data %>%
                        select(starts_with("race_oath")),
                      caption = "Frequency of race")
 
-```
-
-```{r check race frequency}
-# check frequency
-labelled.data %>% 
-  select(starts_with("race_oath_v2")) %>% 
-  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
-  pivot_longer(everything(),
-               names_to = "Race",
-               values_to = "Percentage") %>% 
-  mutate(Race = str_remove(Race, "race_oath_v2_")) %>% 
-  # filter(Race != "Other" & Race != "PNA") %>% # excluding other and PNA in the ranking
-  arrange(desc(Percentage)) %>% 
-  # head(5) %>% 
-  # create html table
-  kable(digits = 2,
-        col.names = c("Race", "Frequency (%)"),
-        caption = "Race frequency",
-        format = "html") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 
@@ -589,28 +541,14 @@ labelled.data <- labelled.data %>%
 
 ```{r check race frequency after merging}
 # check frequency
-labelled.data %>% 
-  select(starts_with("race_oath_v2")) %>% 
-  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
-  pivot_longer(everything(),
-               names_to = "Race",
-               values_to = "Percentage") %>% 
-  mutate(Race = str_remove(Race, "race_oath_v2_")) %>% 
-  # filter(Race != "Other" & Race != "PNA") %>% # excluding other and PNA in the ranking
-  arrange(desc(Percentage)) %>% 
-  # head(5) %>% 
-  # create html table
-  kable(digits = 2,
-        col.names = c("Race", "Frequency (%)"),
-        caption = "Race frequency",
-        format = "html") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"))
+get_checkbox_summary(labelled.data, prefix = "race_oath_v2",
+                     caption = "Race frequency after combining categories")
 ```
 
 
 
 ```{r}
-# glimpse(labelled.data)
+glimpse(labelled.data)
 ```
 
 ```{r export data}
