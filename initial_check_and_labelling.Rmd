@@ -179,6 +179,31 @@ labelled.data <- raw.data %>%
 ```
 
 
+```{r role self specify}
+# check self-defined role 
+
+# make sure this field is not empty only when role = 7/Other
+# labelled.data %>% 
+#   summarise(n = sum((role_oath_v2 != "Other") & (!is.na(role_oath_spec))))
+
+get_category_summary(labelled.data %>% select(role_oath_spec),
+                     caption = "Self-defined role")
+
+# Create a new category for educator
+# and merge "practice leader" into "Supervisor/Team Leader"
+# drop role_oath_spec
+labelled.data <- labelled.data %>% 
+  mutate(role_oath_v2 = case_when(
+    coalesce(str_detect(role_oath_spec, regex("educator", ignore_case = TRUE)), FALSE) ~ "Educator",
+    coalesce(str_detect(role_oath_spec, regex("leader", ignore_case = TRUE)), FALSE) ~ "Supervisor/Team Leader",
+    TRUE ~ role_oath_v2
+  )) %>% 
+  select(-role_oath_spec) 
+
+# The remaining "Other" are those who didn't specify
+```
+
+
 ```{r site and role summary}
 # Missings are treated as an explicit category only for reporting
 get_category_summary(labelled.data %>% 
@@ -186,6 +211,9 @@ get_category_summary(labelled.data %>%
                      caption = "Summary statistics (n (%)) for site and role variables",
                      id = "record_id")
 ```
+
+
+
 
 
 ## 3.2 Demographics
@@ -253,7 +281,7 @@ labelled.data <- labelled.data %>%
 labelled.data <- labelled.data %>% 
   mutate(gender_sum = rowSums(pick(starts_with("gender_"))),
          sex_sum = rowSums(pick(starts_with("sexual_")))) %>% 
-  # treat as missing is sum = 0 (selected none)
+  # treat as missing if sum = 0 (selected none)
   mutate(
     gender_sum = case_when(
       gender_sum == 0 ~ NA,
@@ -336,8 +364,8 @@ labelled.data <- labelled.data %>%
   ) %>% 
   # drop original cols
   select(-starts_with(c("gender_oath_v2___", "sexual_orient_oath_v2___"))) %>% 
-  # drop sum cols
-  select(-c(sex_sum, gender_sum))
+  # drop sum cols and self spec cols
+  select(-c(sex_sum, gender_sum, self_define_gender, self_define_sex1))
 ```
 
 
@@ -529,12 +557,54 @@ labelled.data %>%
 ```
 
 
-**Note**: decide whether to combine South Asian and West Indian into the broader "Asian" category.
-
 ```{r clean up specified race}
-# labelled.data %>% 
-#   filter(!is.na(race_spec)) %>% 
+# labelled.data %>%
+#   filter(!is.na(race_spec)) %>%
 #   select(record_id, starts_with("race_"))
+
+labelled.data <- labelled.data %>% 
+  rename(race_oath_v2_BroadAsian_or_AsianHeritage = race_oath_v2_Asian) %>% 
+  mutate(
+    # combine South Asian, Indo-Caribbean and West Indian into the broader Asian / Asian heritage category
+    # for aggregation purposes
+    race_oath_v2_BroadAsian_or_AsianHeritage = case_when(
+      coalesce(str_detect(race_spec, regex("Asian|Indian|Caribbean", ignore_case = TRUE)), FALSE) ~ 1,
+      TRUE ~ race_oath_v2_BroadAsian_or_AsianHeritage
+    ),
+    # assuming Canadian and European are White
+    race_oath_v2_White = case_when(
+      coalesce(str_detect(race_spec, regex("Canadian|European", ignore_case = TRUE)), FALSE) ~ 1,
+      TRUE ~ race_oath_v2_White
+    ),
+    # for these subgroups convert "Other" to 0
+    race_oath_v2_Other = case_when(
+      coalesce(str_detect(race_spec, regex("Asian|Indian|Caribbean", ignore_case = TRUE)), FALSE) ~ 0,
+      coalesce(str_detect(race_spec, regex("Canadian|European", ignore_case = TRUE)), FALSE) ~ 0,
+      TRUE ~ race_oath_v2_Other
+    )
+  ) %>% 
+  select(-race_spec)
+```
+
+
+```{r check race frequency after merging}
+# check frequency
+labelled.data %>% 
+  select(starts_with("race_oath_v2")) %>% 
+  summarise(across(everything(), \(x) round(mean(x, na.rm = TRUE), 4)*100)) %>% 
+  pivot_longer(everything(),
+               names_to = "Race",
+               values_to = "Percentage") %>% 
+  mutate(Race = str_remove(Race, "race_oath_v2_")) %>% 
+  # filter(Race != "Other" & Race != "PNA") %>% # excluding other and PNA in the ranking
+  arrange(desc(Percentage)) %>% 
+  # head(5) %>% 
+  # create html table
+  kable(digits = 2,
+        col.names = c("Race", "Frequency (%)"),
+        caption = "Race frequency",
+        format = "html") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 
