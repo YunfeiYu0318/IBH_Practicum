@@ -51,29 +51,7 @@ plt_scale_dist <- function(data, prefix, num_col = 3){
 
 
 # Summary stats for categorical variables (n and percentage)
-# get_category_summary <- function(data, caption, id = NULL){
-#   
-#   if(!is.null(id)){
-#     data <- data %>% select(-any_of(id))
-#   }
-#   
-#   data %>% 
-#     mutate(across(where(is.factor), ~fct_na_value_to_level(.x, level = "Missing"))) %>% 
-#     tbl_summary(
-#       missing = "no", # NAs treated as an explicit category
-#       # missing_text = "Missing",
-#       # missing_stat = "{n} ({p}%)",
-#       statistic = list(
-#         all_categorical() ~ "{n} ({p}%)"
-#       )
-#     ) %>% 
-#     bold_labels() %>% 
-#     modify_caption(caption) %>% 
-#     as_gt() %>% 
-#     tab_options(table.width = pct(100))
-# }
-
-get_category_summary <- function(data, caption, id = NULL){
+get_category_summary <- function(data, caption = NULL, id = NULL){
   
   if(!is.null(id)){
     data <- data %>% select(-any_of(id))
@@ -96,8 +74,36 @@ get_category_summary <- function(data, caption, id = NULL){
     tab_options(table.width = pct(100))
 }
 
+# Summary stats for checkbox variables (n and percentage)
 
-
+get_checkbox_summary <- function(data, prefix, caption = NULL, id = NULL){
+  
+  if(!is.null(id)){
+    data <- data %>% select(-any_of(id))
+  }
+  
+  data %>% 
+    select(starts_with(prefix)) %>% 
+    summarise(across(everything(), list(
+      # Calculate Count (n)
+      n = \(x) sum(x == 1, na.rm = TRUE),
+      # Calculate Percentage
+      Perc = \(x) round(mean(x, na.rm = TRUE), 4) * 100
+    ))) %>% 
+    pivot_longer(
+      everything(),
+      names_to = c("Category", ".value"),
+      names_pattern = paste0(prefix, "(.*)_(Perc|n)")
+    ) %>%
+    # Clean up the category names (remove leading underscores if they exist)
+    mutate(Category = str_remove(Category, "^_")) %>%
+    arrange(desc(Perc)) %>% 
+    kable(digits = 2,
+          col.names = c("Race", "Group Size", "Frequency (%)"),
+          caption = caption,
+          format = "html") %>% 
+    kable_styling(bootstrap_options = c("striped", "hover"))
+}
 
 
 
