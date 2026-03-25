@@ -1,5 +1,5 @@
 ---
-title: "Initial Data Inspection"
+title: "Initial Data Check and Aggregation"
 author: "Yunfei Yu, 1005976918"
 date: "2026-02-28"
 output: html_document
@@ -198,9 +198,14 @@ labelled.data <- labelled.data %>%
     coalesce(str_detect(role_oath_spec, regex("leader", ignore_case = TRUE)), FALSE) ~ "Supervisor/Team Leader",
     TRUE ~ role_oath_v2
   )) %>% 
+  # The remaining "Other" are those who didn't specify -> convert to missing
+  mutate(role_oath_v2 = case_when(
+    role_oath_v2 == "Other" ~ NA,
+    TRUE ~ role_oath_v2
+  )) %>% 
   select(-role_oath_spec) 
 
-# The remaining "Other" are those who didn't specify
+# 
 ```
 
 
@@ -371,6 +376,71 @@ labelled.data <- labelled.data %>%
 
 ### 3.2.3 Checkbox (Select all that apply): language and race
 
+#### PNA and "Other"
+
+1. Make sure PNA does not co-occur with other options. If someone selected both PNA and any other languages / races, convert PNA to 0.
+
+2. For someone who chose "other" but does not specify, treat as NAs
+
+```{r check race and language pna}
+# For race and language, make sure PNA does not "co-occur" with other options
+
+# Check the number of participants who selected both PNA and at least one other language / race
+labelled.data %>% 
+  summarise(
+    Language = sum(language_oath_v2___17 == 1 & if_any(starts_with("language_oath") & -language_oath_v2___17, ~ .x == 1)),
+    Race = sum(race_oath_v2___8 == 1 & if_any(starts_with("race_oath") & - race_oath_v2___8, ~ .x == 1))
+  ) %>% 
+  pivot_longer(everything(),
+               names_to = "Variable",
+               values_to = "n") %>% 
+  kable(col.names = c("", "N"),
+    caption = "Number of participants who chose both PNA and other language(s) or race(s)",
+    format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+
+# For the 1 person who chose both PNA and other language,
+# convert the PNA value to 0
+labelled.data <- labelled.data %>% 
+  mutate(language_oath_v2___17 = case_when(
+    language_oath_v2___17 == 1 & if_any(starts_with("language_oath") & -language_oath_v2___17, ~ .x == 1) ~ 0,
+    TRUE ~ language_oath_v2___17
+  ))
+```
+
+
+```{r race and language other not specify}
+# check the number of people who chose other but did not specify
+labelled.data %>% 
+  summarise(
+    Language = sum(language_oath_v2___16 == 1 & is.na(language_specify_oath_v2)),
+    Race = sum(race_oath_v2___7 == 1 & is.na(race_spec))
+  ) %>% 
+  pivot_longer(everything(),
+               names_to = "Variable",
+               values_to = "n") %>% 
+  kable(col.names = c("", "N"),
+    caption = "Number of participants who chose 'Other' but did not specify",
+    format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+# treat these as NA
+labelled.data <- labelled.data %>% 
+  mutate(
+    language_oath_v2___16 = case_when(
+      language_oath_v2___16 == 1 & is.na(language_specify_oath_v2) ~ NA,
+      TRUE ~ language_oath_v2___16
+    ),
+    race_oath_v2___7 = case_when(
+      race_oath_v2___7 == 1 &is.na(race_spec) ~ NA,
+      TRUE ~ race_oath_v2___7
+    )
+  )
+```
+
+
+
 ```{r checkbox language and race}
 # check number of language / race
 labelled.data <- labelled.data %>% 
@@ -441,7 +511,7 @@ get_category_summary(labelled.data %>%
 ```
 
 ```{r check language frequency}
-get_checkbox_summary(labelled.data, prefix = "language_oath_v2", 
+get_checkbox_summary(labelled.data, prefix = "language_oath_v2", colname = "Language",
                      caption = "Top 5 most spoken language")
 ```
 
@@ -479,7 +549,7 @@ labelled.data <- labelled.data %>%
 ```
 
 ```{r check language freq after combining}
-get_checkbox_summary(labelled.data, prefix = "language_oath_v2", 
+get_checkbox_summary(labelled.data, prefix = "language_oath_v2", colname = "Language",
                      caption = "Language frequency after combining categories")
 ```
 
@@ -532,18 +602,22 @@ labelled.data <- labelled.data %>%
     race_oath_v2_Other = case_when(
       coalesce(str_detect(race_spec, regex("Asian|Indian|Caribbean", ignore_case = TRUE)), FALSE) ~ 0,
       coalesce(str_detect(race_spec, regex("Canadian|European", ignore_case = TRUE)), FALSE) ~ 0,
+      # group MiddleEastern (n=6) and LatinHispanic (n=2) into Other
+      race_oath_v2_MiddleEastern == 1 ~ 1,
+      race_oath_v2_LatinHispanic == 1 ~ 1,
       TRUE ~ race_oath_v2_Other
     )
   ) %>% 
-  select(-race_spec)
+  select(-c(race_spec, race_oath_v2_LatinHispanic, race_oath_v2_MiddleEastern))
 ```
 
 
 ```{r check race frequency after merging}
 # check frequency
-get_checkbox_summary(labelled.data, prefix = "race_oath_v2",
+get_checkbox_summary(labelled.data, prefix = "race_oath_v2", colname = "Race",
                      caption = "Race frequency after combining categories")
 ```
+
 
 
 
