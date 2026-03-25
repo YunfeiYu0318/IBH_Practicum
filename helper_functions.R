@@ -76,8 +76,8 @@ get_category_summary <- function(data, caption = NULL, id = NULL){
 
 # Summary stats for checkbox variables (n and percentage)
 
-get_checkbox_summary <- function(data, prefix, caption = NULL, id = NULL){
-  
+get_checkbox_summary <- function(data, prefix, colname, caption = NULL, id = NULL){
+  # colname = the name for the first column
   if(!is.null(id)){
     data <- data %>% select(-any_of(id))
   }
@@ -99,7 +99,7 @@ get_checkbox_summary <- function(data, prefix, caption = NULL, id = NULL){
     mutate(Category = str_remove(Category, "^_")) %>%
     arrange(desc(Perc)) %>% 
     kable(digits = 2,
-          col.names = c("Race", "Group Size", "Frequency (%)"),
+          col.names = c(colname, "Group Size", "Frequency (%)"),
           caption = caption,
           format = "html") %>% 
     kable_styling(bootstrap_options = c("striped", "hover"))
