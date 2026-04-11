@@ -31,6 +31,12 @@ get_missing_stats <- function(data, caption = "Missing percentage summary", pref
   
   # Conditional Return
   if(export_df) {
+    stats_df <- stats_df %>% 
+      rename("variable" = "item",
+             "missing_n" = "count",
+             "missing_pct" = "pct",
+             "completion_pct" = "comp")
+    
     return(stats_df)
   }
   
