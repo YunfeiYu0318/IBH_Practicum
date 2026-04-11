@@ -7,28 +7,32 @@ library(forcats)
 # ----- SUMMARY TABLES AND PLOTS ----- #
 
 # Check missing value count and percentages for scales
-get_missing_stats <- function(data, prefix, caption){
+get_missing_stats <- function(data, caption, prefix = NULL){
+  
+  if(!is.null(prefix)){
+    data <- data %>% dplyr::select(dplyr::starts_with(prefix))
+  }
+  
   # calculate missing stats
-  raw.data %>% 
-    select(starts_with(prefix)) %>% 
-    summarise(
-      across(everything(),
-             list(
-               count = ~sum(is.na(.)),
-               pct = ~mean(is.na(.))*100,
-               comp = ~mean(!is.na(.))*100
-             ))) %>% 
-    pivot_longer(
-      everything(),
+  data %>% 
+    dplyr::summarise(
+      dplyr::across(dplyr::everything(),
+                    list(
+                      count = ~sum(is.na(.)),
+                      pct = ~mean(is.na(.)) * 100,
+                      comp = ~mean(!is.na(.)) * 100
+                    ))) %>% 
+    tidyr::pivot_longer(
+      cols = dplyr::everything(),
       names_to = c("item", ".value"),
-      names_pattern = "(.*)_(count|pct|comp)"
+      names_pattern = "^(.*)_(count|pct|comp)$"
     ) %>% 
     # create html table
-    kable(digits = 2,
-          col.names = c("scale item", "n missing", "missing rate", "completion rate"),
-          caption = caption,
-          format = "html") %>% 
-    kable_styling(bootstrap_options = c("striped", "hover"))
+    knitr::kable(digits = 2,
+                 col.names = c("Scale Item", "N Missing", "Missing Rate (%)", "Completion Rate (%)"),
+                 caption = caption,
+                 format = "html") %>% 
+    kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 }
 
 
