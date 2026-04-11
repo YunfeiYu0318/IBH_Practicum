@@ -7,7 +7,7 @@ library(forcats)
 # ----- SUMMARY TABLES AND PLOTS ----- #
 
 # Check missing value count and percentages for scales
-get_missing_stats <- function(data, caption = NULL, prefix = NULL, export_df = FALSE){
+get_missing_stats <- function(data, caption = "Missing percentage summary", prefix = NULL, export_df = FALSE){
   
   # Handle prefix filtering
   if(!is.null(prefix)){
