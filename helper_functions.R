@@ -4,6 +4,17 @@ library(tidyverse)
 library(forcats)
 
 
+
+# ----- USING VARIABLE SUMMARY ----- #
+
+# Extract variables of the given category from the summary df
+extract_vars <- function(cat, summary = variable_summary){
+  data <- summary %>% 
+    filter(category == cat) %>% 
+    select(variable)
+  return(data$variable)
+}
+
 # ----- SUMMARY TABLES AND PLOTS ----- #
 
 # Check missing value count and percentages for scales
