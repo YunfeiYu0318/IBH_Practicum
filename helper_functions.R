@@ -7,14 +7,15 @@ library(forcats)
 # ----- SUMMARY TABLES AND PLOTS ----- #
 
 # Check missing value count and percentages for scales
-get_missing_stats <- function(data, caption, prefix = NULL){
+get_missing_stats <- function(data, caption = NULL, prefix = NULL, export_df = FALSE){
   
+  # Handle prefix filtering
   if(!is.null(prefix)){
     data <- data %>% dplyr::select(dplyr::starts_with(prefix))
   }
   
-  # calculate missing stats
-  data %>% 
+  # Calculate stats
+  stats_df <- data %>% 
     dplyr::summarise(
       dplyr::across(dplyr::everything(),
                     list(
@@ -25,9 +26,16 @@ get_missing_stats <- function(data, caption, prefix = NULL){
     tidyr::pivot_longer(
       cols = dplyr::everything(),
       names_to = c("item", ".value"),
-      names_pattern = "^(.*)_(count|pct|comp)$"
-    ) %>% 
-    # create html table
+      names_sep = "_(?=[^_]+$)" # Splits at the LAST underscore only
+    )
+  
+  # Conditional Return
+  if(export_df) {
+    return(stats_df)
+  }
+  
+  # Create HTML table (if export_df is FALSE)
+  stats_df %>% 
     knitr::kable(digits = 2,
                  col.names = c("Scale Item", "N Missing", "Missing Rate (%)", "Completion Rate (%)"),
                  caption = caption,
