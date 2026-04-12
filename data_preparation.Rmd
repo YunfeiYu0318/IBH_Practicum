@@ -1,0 +1,518 @@
+---
+title: "Data Preparation - Initial Cleaning"
+author: "Yunfei Yu"
+date: "2026-04-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width = "100%", warning = FALSE)
+```
+
+```{r libraries, message=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+library(skimr)
+library(naniar)
+# library(VIM)
+library(gtsummary)
+library(gt)
+library(forcats)
+library(stringr)
+library(psych)
+```
+
+```{r import helper functions, message=FALSE}
+source("helper_functions.R")
+```
+
+# 1 Inspect Raw Data
+
+```{r read in raw data}
+raw_data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx") %>% 
+  # drop redcap_event_name and redcap_survey_identifier
+  select(-c(redcap_event_name, redcap_survey_identifier)) %>% 
+  # drop completeness check variables
+  select(-contains("complete"))
+
+# check if record_id is unique
+nrow(raw_data) == n_distinct(raw_data$record_id)
+
+# check dimension
+dim(raw_data)
+```
+
+```{r create raw data variable summary}
+variable_summary <- get_missing_stats(data = raw_data, export_df = TRUE) %>% 
+  mutate(category = case_when(
+    str_detect(variable, "site|role|years_employed|academic") ~ "site and role",
+    str_detect(variable, "age|gender|sexual_orient|sex|disability|indigenous|poc|language|race") ~ "demographics",
+    variable == "record_id" ~ "identifier", 
+    TRUE ~ "scale"
+  ))
+
+head(variable_summary)
+```
+
+
+# 2 Label Data
+
+## 2.1 Label Site and Role
+
+```{r label site and role data}
+site_role_vars <- extract_vars(cat = "site and role")
+
+site_role_data <- raw_data %>% 
+  select(record_id, all_of(site_role_vars)) %>% 
+  mutate(
+    site_oath_v2 = factor(site_oath_v2,
+                          levels = c(1, 2, 3, 4),
+                          labels = c("Credit Valley Hospital", 
+                                     "Missisauga Hospital", 
+                                     "Queensway Health Centre", 
+                                     "Other")
+                          ),
+    role_oath_v2 = factor(role_oath_v2,
+                          levels = c(1, 2, 3, 4, 5, 6, 7),
+                          labels = c("Administrative/Consultant",
+                                     "Director",
+                                     "Manager",
+                                     "Professional Staff",
+                                     "Senior Leadership",
+                                     "Supervisor/Team Leader",
+                                     "Other")
+                          ),
+    years_role_oath_v2 = factor(years_role_oath_v2,
+                                levels = c(1, 2, 3, 4, 5),
+                                labels = c("<1",
+                                           "1-3",
+                                           "3-6",
+                                           "6-9",
+                                           "10+")
+                                ),
+    years_employed_thp_v2 = factor(years_employed_thp_v2,
+                                   levels = c(1, 2, 3, 4, 5),
+                                   labels = c("<1",
+                                              "1-3",
+                                              "3-6",
+                                              "6-9",
+                                              "10+")
+                                   ),
+    academic_appt = factor(academic_appt,
+                           levels = c(1, 0),
+                           labels = c("Yes", "No"))
+  )
+
+```
+
+
+## 2.2 Label Demographic Variables
+
+- **Factor**: age, disability, indigenous, poc
+- **MC**: gender, sexual orientation
+- **Choose all that apply**: language, race
+
+```{r label demographics data}
+demog_vars <- extract_vars(cat = "demographics")
+
+demog_data <- raw_data %>% 
+  select(record_id, all_of(demog_vars)) %>% 
+  # label factor variables
+  mutate(
+    age_oath_v2 = factor(age_oath_v2,
+                         levels = c(1, 2, 3, 4, 5, 6),
+                         labels = c("<18",
+                                    "18-29",
+                                    "30-54",
+                                    "55-64",
+                                    "65+",
+                                    "Prefer not to answer")
+                         ),
+    disability_oath_v2 = factor(disability_oath_v2,
+                                levels = c(1, 2, 3),
+                                labels = c("Yes", "No", "Prefer not to answer")
+                                ),
+    indigenous_oath_v2 = factor(indigenous_oath_v2,
+                                levels = c(1, 2, 3),
+                                labels = c("Yes", "No", "Prefer not to answer")
+                                ),
+    poc_oath_v2 = factor(poc_oath_v2,
+                         levels = c(1, 2, 3),
+                         labels = c("Yes", "No", "Prefer not to answer")
+                         )
+  ) %>% 
+  # label MC variables (gender and sexual orientation): 
+  # treat as missing if selected 0 or >1 categories
+  mutate(gender_sum = rowSums(pick(starts_with("gender_"))) + ifelse(is.na(self_define_gender), 0, 1),
+         sex_sum = rowSums(pick(starts_with("sexual_"))) + ifelse(is.na(self_define_sex1), 0, 1)) %>%
+  mutate(
+    gender_oath_v2 = case_when(
+      gender_sum > 1 | gender_sum == 0 ~ NA,
+      gender_oath_v2___1 == 1 ~ "Woman",
+      gender_oath_v2___2 == 1 ~ "Man",
+      gender_oath_v2___3 == 1 ~ "Trans",
+      gender_oath_v2___4 == 1 ~ "Two Spirit",
+      gender_oath_v2___5 == 1 ~ "Prefer to self-define",
+      gender_oath_v2___6 == 1 ~ "Prefer not to answer",
+      TRUE ~ NA
+    ),
+    sexual_orient_oath_v2 = case_when(
+      sex_sum > 1 | sex_sum == 0 ~ NA,
+      sexual_orient_oath_v2___1 == 1 ~ "Gay",
+      sexual_orient_oath_v2___2 == 1 ~ "Lesbian",
+      sexual_orient_oath_v2___3 == 1 ~ "Straight/Heterosexual",
+      sexual_orient_oath_v2___4 == 1 ~ "Bisexual",
+      sexual_orient_oath_v2___5 == 1 ~ "Queer",
+      sexual_orient_oath_v2___6 == 1 ~ "Two Spirit",
+      sexual_orient_oath_v2___7 == 1 ~ "Prefer to self-define",
+      sexual_orient_oath_v2___8 == 1 ~ "Prefer not to answer",
+      TRUE ~ NA
+    )
+  ) %>% 
+  select(-starts_with(c("gender_oath_v2___", "sexual_orient_oath_v2___"))) %>% 
+  select(-c(gender_sum, sex_sum)) %>% 
+  # rename checkbox (choose all that apply): language
+  rename(
+    language_oath_v2_English = language_oath_v2___1,
+    language_oath_v2_French = language_oath_v2___2,
+    language_oath_v2_Indigenous = language_oath_v2___3,
+    language_oath_v2_Mandarin = language_oath_v2___4,
+    language_oath_v2_Cantonese = language_oath_v2___5,
+    language_oath_v2_Punjabi = language_oath_v2___6,
+    language_oath_v2_Hindi = language_oath_v2___7,
+    language_oath_v2_Urdu = language_oath_v2___8,
+    language_oath_v2_Spanish = language_oath_v2___9,
+    language_oath_v2_Portuguese = language_oath_v2___10,
+    language_oath_v2_Tagalog = language_oath_v2___11,
+    language_oath_v2_Vietnamese = language_oath_v2___12,
+    language_oath_v2_Arabic = language_oath_v2___13,
+    language_oath_v2_ASL = language_oath_v2___14,
+    language_oath_v2_LSQ = language_oath_v2___15,
+    language_oath_v2_Other = language_oath_v2___16,
+    language_oath_v2_PNA = language_oath_v2___17,
+  ) %>% 
+  # rename checkbox (choose all that apply): language
+  rename(
+    race_oath_v2_Asian = race_oath_v2___1,
+    race_oath_v2_Black = race_oath_v2___2,
+    race_oath_v2_LatinHispanic = race_oath_v2___3,
+    race_oath_v2_MiddleEastern = race_oath_v2___4,
+    race_oath_v2_Mixed = race_oath_v2___5,
+    race_oath_v2_White = race_oath_v2___6,
+    race_oath_v2_Other = race_oath_v2___7,
+    race_oath_v2_PNA = race_oath_v2___8,
+  )
+```
+
+
+## 2.3 Check Self-Defined / Specified Values and Special Cases
+
+- **Self-define**: gender, sexual orientation
+- **Please specify**: role, language, race
+
+```{r self defined values summary}
+# joint demog and role & sites df
+demog_data <- site_role_data %>% left_join(demog_data, by = "record_id")
+
+get_category_summary(demog_data %>%
+                       select(matches("spec|define")),
+                     caption = "Self-defined or specified values")
+```
+
+
+```{r regroup self spec}
+# regroup based on self-defined / specified values
+# the remaining "Other" are those who didn't specify -> convert to missing
+
+demog_final <- demog_data %>% 
+  # regroup role
+  mutate(role_oath_v2 = case_when(
+    coalesce(str_detect(role_oath_spec, regex("educator", ignore_case = TRUE)), FALSE) ~ "Educator",
+    coalesce(str_detect(role_oath_spec, regex("leader", ignore_case = TRUE)), FALSE) ~ "Supervisor/Team Leader",
+    TRUE ~ role_oath_v2)
+  ) %>% 
+  mutate(role_oath_v2 = case_when(
+    role_oath_v2 == "Other" ~ NA,
+    TRUE ~ role_oath_v2)
+  ) %>% 
+  # language and race PNA:
+  # if both PNA and any other box are checked, convert PNA to 0
+  # also if PNA is checked but self-specified other values, convert PNA to 0
+  mutate(language_oath_v2_PNA = case_when(
+    language_oath_v2_PNA == 1 & if_any(starts_with("language_oath") & -language_oath_v2_PNA, ~ .x == 1) ~ 0,
+    language_oath_v2_PNA == 1 & !is.na(language_specify_oath_v2) ~ 0,
+    TRUE ~ language_oath_v2_PNA)
+  ) %>% 
+  mutate(race_oath_v2_PNA = case_when(
+    race_oath_v2_PNA == 1 & if_any(starts_with("race_oath") & -race_oath_v2_PNA, ~ .x == 1) ~ 0,
+    race_oath_v2_PNA == 1 & !is.na(race_spec) ~ 0,
+    TRUE ~ race_oath_v2_PNA)
+  ) %>% 
+  # regroup race
+  rename(race_oath_v2_BroadAsian = race_oath_v2_Asian) %>% 
+  mutate(
+    # combine South Asian, Indo-Caribbean and West Indian into the broader Asian / Asian heritage category
+    # for aggregation purposes
+    race_oath_v2_BroadAsian = case_when(
+      coalesce(str_detect(race_spec, regex("Asian|Indian|Caribbean", ignore_case = TRUE)), FALSE) ~ 1,
+      TRUE ~ race_oath_v2_BroadAsian
+    ),
+    # assuming Canadian and European are White
+    race_oath_v2_White = case_when(
+      coalesce(str_detect(race_spec, regex("Canadian|European", ignore_case = TRUE)), FALSE) ~ 1,
+      TRUE ~ race_oath_v2_White
+    )
+  ) %>% 
+  # language: keep only EN and FR, combine others into one category
+  mutate(
+    language_oath_v2_Other = case_when(
+      rowSums(select(., language_oath_v2_Indigenous:language_oath_v2_Other), na.rm = TRUE) >= 1 ~ 1,
+      TRUE ~ 0
+    )
+  ) %>% 
+  select(-c(language_oath_v2_Indigenous:language_oath_v2_Arabic))
+
+   
+
+# create indicator for multi language & race
+races <- demog_final %>% 
+  select(contains("race_oath") & !matches("Mixed|Other|PNA")) %>% 
+  colnames()
+
+demog_final <- demog_final %>% 
+  mutate(
+    # extract the number of self specified language(s)
+    temp_text_lang = str_trim(language_specify_oath_v2) %>% str_remove(",$"),
+    lang_spec_count = case_when(
+      is.na(temp_text_lang) | temp_text_lang == "" ~ 0,
+      TRUE ~ as.numeric(lengths(str_split(temp_text_lang, ",\\s*")))
+    )
+  ) %>% 
+  # create multilingual/racial indicator, 1 if more than one language/race, 0 otherwise
+  # (not including race_spec in calculation since it is merged with other groups earlier)
+  mutate(multilingual = ifelse(rowSums(pick(starts_with("language_oath"))) + lang_spec_count > 1, 
+                               "Yes", "No"),
+         sign_languages = case_when(
+           language_oath_v2_ASL == 1 ~ "Yes",
+           language_oath_v2_LSQ == 1 ~ "Yes",
+           TRUE ~ "No"
+         ),
+         multiracial = case_when(
+           rowSums(.[races]) > 1 ~ "Yes",
+           race_oath_v2_Mixed == 1 ~ "Yes",
+           TRUE ~ "No"
+         )
+  ) %>% 
+  select(-matches("spec|define|temp"))
+```
+
+# 4 Remove NAs in Scales Items
+
+Removing participants who either
+
+- Skipped more than 50% of the questionnaires, or
+
+- Chose "8: Not Applicable" in more than 50% of the questions
+
+```{r check missing in scale items df, fig.height=8}
+# extract scale variables
+scale_vars <- extract_vars(cat = "scale")
+scale_df <- raw_data %>% 
+  select(record_id, all_of(scale_vars)) %>% 
+  select(-innov_lead_disc)
+
+# calculate row-wise missing rate and proportion of 8
+scale_df <- scale_df %>% 
+  mutate(
+    missing_rate = rowMeans(is.na(.)),
+    prop_8 = rowMeans(. == 8, na.rm = TRUE)
+  )
+
+# drop observations with >50% missing rate or >50% "Not Applicable"
+scale_df <- scale_df %>% 
+  filter(missing_rate <= 0.5 & prop_8 <= 0.5)
+# nrow(scale_df)
+
+# check missing pattern in the remaining data
+gg_miss_upset(scale_df, nsets = ncol(scale_df), mb.ratio = c(0.3, 0.7))
+```
+
+# 5 Summary Statistics
+
+## 5.1 Demographics Summary
+
+```{r demographic summary stats}
+get_category_summary(data = demog_final, caption = "Distribution by Demographic Variables", id = "record_id")
+```
+
+
+## 5.2 Scales 
+
+### 5.2.1 Distribution
+
+```{r explore scale distribution}
+plt_scale_dist(data = scale_df, prefix = "explore_")
+```
+
+```{r exploit scale distribution}
+plt_scale_dist(data = scale_df, prefix = "exploit_", num_col = 4)
+```
+
+```{r deimp scale distribution}
+plt_scale_dist(data = scale_df, prefix = "deimp", num_col = 3)
+```
+
+```{r ocis scale distribution, fig.height=10}
+plt_scale_dist(data = scale_df, prefix = "ocis", num_col = 6)
+```
+
+```{r ols scale distribution, fig.height=8}
+plt_scale_dist(data = scale_df, prefix = "ols", num_col = 5)
+```
+
+### 5.2.2 Scale Reliability
+
+Note 1: treating 8 as NAs for checking reliability.
+
+Note 2: `explore_innov_def_1`, `explore_innov_def_2`, `exploit_innov_def_1` and `exploit_innov_def_2` are added by the project team, rest of Organization Learning Ambidexterity Survey are adapted from Mom et al 2009.
+
+```{r check scale reliability}
+explore_alpha <- scale_df %>%
+  select(starts_with("explore_")) %>% 
+  # convert 8 to missing
+  mutate(across(everything(), ~na_if(., 8))) %>% 
+  psych::alpha(title = "OA Exploration")
+
+exploit_alpha <- scale_df %>% 
+  select(starts_with("exploit")) %>% 
+  # convert 8 to missing
+  mutate(across(everything(), ~na_if(., 8))) %>% 
+  psych::alpha(title = "OA Exploitation")
+
+deimp_alpha <- scale_df %>% 
+  select(starts_with("deimp")) %>% 
+  # convert 8 to missing
+  mutate(across(everything(), ~na_if(., 8))) %>% 
+  psych::alpha(title = "OA Deimplementation")
+
+ocis_alpha <- scale_df %>% 
+  select(starts_with("ocis")) %>% 
+  # convert 8 to missing
+  mutate(across(everything(), ~na_if(., 8))) %>% 
+  psych::alpha(title = "OA OCIS")
+
+ols_alpha <- scale_df %>% 
+  select(starts_with("ols")) %>% 
+  # convert 8 to missing
+  mutate(across(everything(), ~na_if(., 8))) %>% 
+  psych::alpha(title = "OA OLS")
+```
+
+```{r extract reliability resuls}
+# create summary table
+reliability_summary <- bind_rows(
+  extract_alpha_results(explore_alpha, "Ambidexterity (Exploration)"),
+  extract_alpha_results(exploit_alpha, "Ambidexterity (Exploitation)"),
+  extract_alpha_results(deimp_alpha, "Deimplementation"),
+  extract_alpha_results(ocis_alpha, "OCIS"),
+  extract_alpha_results(ols_alpha, "OLS")
+)
+
+reliability_summary %>% 
+  kable(format = "html",
+        caption = "Scale Reliability") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+### 5.2.3 Summary of Individual Scales
+
+Note: treating 8 as NAs for checking reliability. "Valid n" includes non-missing and non-8 responses.
+
+#### Exploration
+
+```{r exploration item summary}
+explore_item_summary <- extract_item_stats(data = scale_df, alpha_obj = explore_alpha)
+explore_item_summary %>% 
+   kable(format = "html",
+        caption = "Exploration Item Summary (Scale Raw Alpha = 0.72)") %>%
+   kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+#### Exploitation
+
+```{r exploitation item summary}
+exploit_item_summary <- extract_item_stats(data = scale_df, alpha_obj = exploit_alpha)
+exploit_item_summary %>% 
+   kable(format = "html",
+        caption = "Exploitation Item Summary (Scale Raw Alpha = 0.69)") %>%
+   kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+
+#### Deimplementation
+
+```{r deimplementation item summary}
+deimp_item_summary <- extract_item_stats(data = scale_df, alpha_obj = deimp_alpha)
+deimp_item_summary %>% 
+   kable(format = "html",
+        caption = "Deimplementation Item Summary (Scale Raw Alpha = 0.88)") %>%
+   kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+#### OCIS
+
+```{r ocis item summary}
+ocis_item_summary <- extract_item_stats(data = scale_df, alpha_obj = ocis_alpha)
+ocis_item_summary %>% 
+   kable(format = "html",
+        caption = "OCIS Item Summary (Scale Raw Alpha = 0.94)") %>%
+   kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+
+#### OLS
+
+```{r ols item summary}
+ols_item_summary <- extract_item_stats(data = scale_df, alpha_obj = ols_alpha)
+ols_item_summary %>% 
+   kable(format = "html",
+        caption = "OLS Item Summary (Scale Raw Alpha = 0.92)") %>%
+   kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+# 7 Create Final Dataset
+
+- Drop variables that have no variability (have only one value)
+- Calculate row-wise completion rate
+
+```{r create final df}
+final_data <- demog_final %>% 
+  select(-c(language_oath_v2_ASL, language_oath_v2_LSQ, sign_languages)) %>% 
+  right_join(scale_df, by = "record_id") %>% 
+  select(-c(missing_rate, prop_8)) %>% 
+  # calculate overall completion rate
+  mutate(completion_rate = round(rowMeans(!is.na(.))*100, 2))
+
+dim(final_data)
+```
+
+## 7.1 Check Completion Rate
+
+```{r completion rate}
+final_data %>% 
+  summarise(
+    avg = mean(completion_rate),
+    min = min(completion_rate),
+    max = max(completion_rate),
+    prop_all_comp = mean(completion_rate == 100.00)*100
+  ) %>% 
+  kable(digits = 2,
+        caption = "Row-wise Completion Rate Summary",
+        col.names = c("Average", "Minimum", "Maximum", "All Completed (%)"),
+        format = "html") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
