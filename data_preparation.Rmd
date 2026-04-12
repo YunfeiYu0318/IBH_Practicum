@@ -385,35 +385,32 @@ Note 1: treating 8 as NAs for checking reliability.
 
 Note 2: `explore_innov_def_1`, `explore_innov_def_2`, `exploit_innov_def_1` and `exploit_innov_def_2` are added by the project team, rest of Organization Learning Ambidexterity Survey are adapted from Mom et al 2009.
 
+```{r}
+# convert 8 to missing
+scale_converted <- scale_df %>% 
+  mutate(across(-record_id, ~na_if(., 8)))
+```
+
+
 ```{r check scale reliability}
-explore_alpha <- scale_df %>%
+explore_alpha <- scale_converted %>%
   select(starts_with("explore_")) %>% 
-  # convert 8 to missing
-  mutate(across(everything(), ~na_if(., 8))) %>% 
   psych::alpha(title = "OA Exploration")
 
-exploit_alpha <- scale_df %>% 
-  select(starts_with("exploit")) %>% 
-  # convert 8 to missing
-  mutate(across(everything(), ~na_if(., 8))) %>% 
+exploit_alpha <- scale_converted %>% 
+  select(starts_with("exploit")) %>%  
   psych::alpha(title = "OA Exploitation")
 
-deimp_alpha <- scale_df %>% 
+deimp_alpha <- scale_converted %>% 
   select(starts_with("deimp")) %>% 
-  # convert 8 to missing
-  mutate(across(everything(), ~na_if(., 8))) %>% 
   psych::alpha(title = "OA Deimplementation")
 
-ocis_alpha <- scale_df %>% 
+ocis_alpha <- scale_converted %>% 
   select(starts_with("ocis")) %>% 
-  # convert 8 to missing
-  mutate(across(everything(), ~na_if(., 8))) %>% 
   psych::alpha(title = "OA OCIS")
 
-ols_alpha <- scale_df %>% 
+ols_alpha <- scale_converted %>% 
   select(starts_with("ols")) %>% 
-  # convert 8 to missing
-  mutate(across(everything(), ~na_if(., 8))) %>% 
   psych::alpha(title = "OA OLS")
 ```
 
@@ -440,7 +437,7 @@ Note: treating 8 as NAs for checking reliability. "Valid n" includes non-missing
 #### Exploration
 
 ```{r exploration item summary}
-explore_item_summary <- extract_item_stats(data = scale_df, alpha_obj = explore_alpha)
+explore_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = explore_alpha)
 explore_item_summary %>% 
    kable(format = "html",
         caption = "Exploration Item Summary (Scale Raw Alpha = 0.72)") %>%
@@ -450,7 +447,7 @@ explore_item_summary %>%
 #### Exploitation
 
 ```{r exploitation item summary}
-exploit_item_summary <- extract_item_stats(data = scale_df, alpha_obj = exploit_alpha)
+exploit_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = exploit_alpha)
 exploit_item_summary %>% 
    kable(format = "html",
         caption = "Exploitation Item Summary (Scale Raw Alpha = 0.69)") %>%
@@ -461,7 +458,7 @@ exploit_item_summary %>%
 #### Deimplementation
 
 ```{r deimplementation item summary}
-deimp_item_summary <- extract_item_stats(data = scale_df, alpha_obj = deimp_alpha)
+deimp_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = deimp_alpha)
 deimp_item_summary %>% 
    kable(format = "html",
         caption = "Deimplementation Item Summary (Scale Raw Alpha = 0.88)") %>%
@@ -471,7 +468,7 @@ deimp_item_summary %>%
 #### OCIS
 
 ```{r ocis item summary}
-ocis_item_summary <- extract_item_stats(data = scale_df, alpha_obj = ocis_alpha)
+ocis_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = ocis_alpha)
 ocis_item_summary %>% 
    kable(format = "html",
         caption = "OCIS Item Summary (Scale Raw Alpha = 0.94)") %>%
@@ -482,7 +479,7 @@ ocis_item_summary %>%
 #### OLS
 
 ```{r ols item summary}
-ols_item_summary <- extract_item_stats(data = scale_df, alpha_obj = ols_alpha)
+ols_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = ols_alpha)
 ols_item_summary %>% 
    kable(format = "html",
         caption = "OLS Item Summary (Scale Raw Alpha = 0.92)") %>%
@@ -497,7 +494,7 @@ ols_item_summary %>%
 ```{r create final df}
 final_data <- demog_final %>% 
   select(-c(language_oath_v2_ASL, language_oath_v2_LSQ, sign_languages)) %>% 
-  right_join(scale_df, by = "record_id") %>% 
+  right_join(scale_converted, by = "record_id") %>% 
   select(-c(missing_rate, prop_8)) %>% 
   # calculate overall completion rate
   mutate(completion_rate = round(rowMeans(!is.na(.))*100, 2))
