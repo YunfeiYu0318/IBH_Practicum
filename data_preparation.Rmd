@@ -359,9 +359,14 @@ get_category_summary(data = demog_final, caption = "Distribution by Demographic 
 
 ### Distribution
 
+Check distributions of each scale items before converting 8 to NA.
+
+#### Exploration
+
 ```{r explore scale distribution}
 plt_scale_dist(data = scale_df, prefix = "explore_")
 ```
+
 
 ```{r exploit scale distribution}
 plt_scale_dist(data = scale_df, prefix = "exploit_", num_col = 4)
@@ -436,54 +441,49 @@ Note: treating 8 as NAs for checking reliability. "Valid n" includes non-missing
 
 #### Exploration
 
-```{r exploration item summary}
-explore_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = explore_alpha)
-explore_item_summary %>% 
-   kable(format = "html",
-        caption = "Exploration Item Summary (Scale Raw Alpha = 0.72)") %>%
-   kable_styling(bootstrap_options = c("striped", "hover"))
+```{r exploration item summary, results='asis'}
+explore_item_summary <- extract_item_stats(data = scale_converted, 
+                                           alpha_obj = explore_alpha, 
+                                           scale_prefix = "explore", 
+                                           cap = "Exploration Item Summary (Scale Raw Alpha = 0.72)")
 ```
 
 #### Exploitation
 
-```{r exploitation item summary}
-exploit_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = exploit_alpha)
-exploit_item_summary %>% 
-   kable(format = "html",
-        caption = "Exploitation Item Summary (Scale Raw Alpha = 0.69)") %>%
-   kable_styling(bootstrap_options = c("striped", "hover"))
+```{r exploitation item summary, results='asis'}
+exploit_item_summary <- extract_item_stats(data = scale_converted, 
+                                           alpha_obj = exploit_alpha, 
+                                           scale_prefix = "exploit", 
+                                           cap = "Exploitation Item Summary (Scale Raw Alpha = 0.69)")
 ```
 
 
 #### Deimplementation
 
-```{r deimplementation item summary}
-deimp_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = deimp_alpha)
-deimp_item_summary %>% 
-   kable(format = "html",
-        caption = "Deimplementation Item Summary (Scale Raw Alpha = 0.88)") %>%
-   kable_styling(bootstrap_options = c("striped", "hover"))
+```{r deimplementation item summary, results='asis'}
+deimp_item_summary <- extract_item_stats(data = scale_converted,
+                                         alpha_obj = deimp_alpha,
+                                         scale_prefix = "deimp",
+                                         cap = "Deimplementation Item Summary (Scale Raw Alpha = 0.88)")
 ```
 
 #### OCIS
 
-```{r ocis item summary}
-ocis_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = ocis_alpha)
-ocis_item_summary %>% 
-   kable(format = "html",
-        caption = "OCIS Item Summary (Scale Raw Alpha = 0.94)") %>%
-   kable_styling(bootstrap_options = c("striped", "hover"))
+```{r ocis item summary, results='asis'}
+ocis_item_summary <- extract_item_stats(data = scale_converted,
+                                        alpha_obj = ocis_alpha,
+                                        scale_prefix = "ocis",
+                                        cap = "OCIS Item Summary (Scale Raw Alpha = 0.94)")
 ```
 
 
 #### OLS
 
-```{r ols item summary}
-ols_item_summary <- extract_item_stats(data = scale_converted, alpha_obj = ols_alpha)
-ols_item_summary %>% 
-   kable(format = "html",
-        caption = "OLS Item Summary (Scale Raw Alpha = 0.92)") %>%
-   kable_styling(bootstrap_options = c("striped", "hover"))
+```{r ols item summary, results='asis'}
+ols_item_summary <- extract_item_stats(data = scale_converted,
+                                       alpha_obj = ols_alpha,
+                                       scale_prefix = "ols",
+                                       cap = "OLS Item Summary (Scale Raw Alpha = 0.92)")
 ```
 
 # Create Final Dataset
