@@ -163,6 +163,49 @@ extract_alpha_results <- function(alpha_obj, scale_name) {
 }
 
 
+extract_item_stats <- function(data, alpha_obj){
+  # get the item names from the alpha object
+  item_names <- rownames(alpha_obj$item.stats)
+  
+  # calculate medians for each item
+  medians <- data %>%
+    dplyr::select(all_of(item_names)) %>%
+    summarise(across(everything(), ~median(.x, na.rm = TRUE))) %>%
+    pivot_longer(everything(), names_to = "item", values_to = "median")
+  
+  # extract stats from alpha_obj
+  item_stats_df <- alpha_obj$item.stats %>%
+    as.data.frame() %>%
+    rownames_to_column("item") %>%
+    mutate(
+      `mean_sd` = paste0(round(mean, 2), " (", round(sd, 2), ")")
+    ) %>%
+    select(item, n, mean_sd, r.drop)
+  
+  alpha_drop_df <- alpha_obj$alpha.drop %>%
+    as.data.frame() %>%
+    rownames_to_column("item") %>%
+    dplyr::select(item, raw_alpha) %>%
+    rename(alpha_if_dropped = raw_alpha)
+  
+  # join components
+  final_item_table <- item_stats_df %>%
+    left_join(medians, by = "item") %>%
+    left_join(alpha_drop_df, by = "item") %>%
+    mutate(
+      across(c(r.drop, alpha_if_dropped), ~round(.x, 2))
+    ) %>%
+    dplyr::select(
+      Item = item,
+      `Valid n` = n,
+      Median = median,
+      `Mean (SD)` = mean_sd,
+      `r.drop` = r.drop,
+      `Alpha if Dropped` = alpha_if_dropped
+    )
+  
+  return(final_item_table)
+}
 
 
 
