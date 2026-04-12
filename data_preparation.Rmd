@@ -2,7 +2,13 @@
 title: "Data Preparation - Initial Cleaning"
 author: "Yunfei Yu"
 date: "2026-04-11"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
@@ -29,7 +35,7 @@ library(psych)
 source("helper_functions.R")
 ```
 
-# 1 Inspect Raw Data
+# Inspect Raw Data
 
 ```{r read in raw data}
 raw_data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx") %>% 
@@ -58,9 +64,9 @@ head(variable_summary)
 ```
 
 
-# 2 Label Data
+# Label Data
 
-## 2.1 Label Site and Role
+## Label Site and Role
 
 ```{r label site and role data}
 site_role_vars <- extract_vars(cat = "site and role")
@@ -109,7 +115,7 @@ site_role_data <- raw_data %>%
 ```
 
 
-## 2.2 Label Demographic Variables
+## Label Demographic Variables
 
 - **Factor**: age, disability, indigenous, poc
 - **MC**: gender, sexual orientation
@@ -208,7 +214,7 @@ demog_data <- raw_data %>%
 ```
 
 
-## 2.3 Check Self-Defined / Specified Values and Special Cases
+## Check Self-Defined / Specified Values and Special Cases
 
 - **Self-define**: gender, sexual orientation
 - **Please specify**: role, language, race
@@ -309,7 +315,7 @@ demog_final <- demog_final %>%
   select(-matches("spec|define|temp"))
 ```
 
-# 4 Remove NAs in Scales Items
+# Remove NAs in Scales Items
 
 Removing participants who either
 
@@ -340,18 +346,18 @@ scale_df <- scale_df %>%
 gg_miss_upset(scale_df, nsets = ncol(scale_df), mb.ratio = c(0.3, 0.7))
 ```
 
-# 5 Summary Statistics
+# Summary Statistics
 
-## 5.1 Demographics Summary
+## Demographics Summary
 
 ```{r demographic summary stats}
 get_category_summary(data = demog_final, caption = "Distribution by Demographic Variables", id = "record_id")
 ```
 
 
-## 5.2 Scales 
+## Scales 
 
-### 5.2.1 Distribution
+### Distribution
 
 ```{r explore scale distribution}
 plt_scale_dist(data = scale_df, prefix = "explore_")
@@ -373,7 +379,7 @@ plt_scale_dist(data = scale_df, prefix = "ocis", num_col = 6)
 plt_scale_dist(data = scale_df, prefix = "ols", num_col = 5)
 ```
 
-### 5.2.2 Scale Reliability
+### Scale Reliability
 
 Note 1: treating 8 as NAs for checking reliability.
 
@@ -427,7 +433,7 @@ reliability_summary %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
-### 5.2.3 Summary of Individual Scales
+### Summary of Individual Scales
 
 Note: treating 8 as NAs for checking reliability. "Valid n" includes non-missing and non-8 responses.
 
@@ -483,7 +489,7 @@ ols_item_summary %>%
    kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
-# 7 Create Final Dataset
+# Create Final Dataset
 
 - Drop variables that have no variability (have only one value)
 - Calculate row-wise completion rate
@@ -499,7 +505,7 @@ final_data <- demog_final %>%
 dim(final_data)
 ```
 
-## 7.1 Check Completion Rate
+## Check Completion Rate
 
 ```{r completion rate}
 final_data %>% 
