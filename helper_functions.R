@@ -200,7 +200,7 @@ extract_item_stats <- function(data, alpha_obj){
       `Valid n` = n,
       Median = median,
       `Mean (SD)` = mean_sd,
-      `r.drop` = r.drop,
+      `Corrected Item-Total r` = r.drop,
       `Alpha if Dropped` = alpha_if_dropped
     )
   
