@@ -105,35 +105,66 @@ get_category_summary <- function(data, caption = NULL, id = NULL){
 
 # Summary stats for checkbox variables (n and percentage)
 
-get_checkbox_summary <- function(data, prefix, colname, caption = NULL, id = NULL){
-  # colname = the name for the first column
-  if(!is.null(id)){
-    data <- data %>% select(-any_of(id))
-  }
-  
-  data %>% 
-    select(starts_with(prefix)) %>% 
-    summarise(across(everything(), list(
-      # Calculate Count (n)
-      n = \(x) sum(x == 1, na.rm = TRUE),
-      # Calculate Percentage
-      Perc = \(x) round(mean(x, na.rm = TRUE), 4) * 100
-    ))) %>% 
-    pivot_longer(
-      everything(),
-      names_to = c("Category", ".value"),
-      names_pattern = paste0(prefix, "(.*)_(Perc|n)")
-    ) %>%
-    # Clean up the category names (remove leading underscores if they exist)
-    mutate(Category = str_remove(Category, "^_")) %>%
-    arrange(desc(Perc)) %>% 
-    kable(digits = 2,
-          col.names = c(colname, "Group Size", "Frequency (%)"),
-          caption = caption,
-          format = "html") %>% 
-    kable_styling(bootstrap_options = c("striped", "hover"))
-}
+# get_checkbox_summary <- function(data, prefix, colname, caption = NULL, id = NULL){
+#   # colname = the name for the first column
+#   if(!is.null(id)){
+#     data <- data %>% select(-any_of(id))
+#   }
+#   
+#   data %>% 
+#     select(starts_with(prefix)) %>% 
+#     summarise(across(everything(), list(
+#       # Calculate Count (n)
+#       n = \(x) sum(x == 1, na.rm = TRUE),
+#       # Calculate Percentage
+#       Perc = \(x) round(mean(x, na.rm = TRUE), 4) * 100
+#     ))) %>% 
+#     pivot_longer(
+#       everything(),
+#       names_to = c("Category", ".value"),
+#       names_pattern = paste0(prefix, "(.*)_(Perc|n)")
+#     ) %>%
+#     # Clean up the category names (remove leading underscores if they exist)
+#     mutate(Category = str_remove(Category, "^_")) %>%
+#     arrange(desc(Perc)) %>% 
+#     kable(digits = 2,
+#           col.names = c(colname, "Group Size", "Frequency (%)"),
+#           caption = caption,
+#           format = "html") %>% 
+#     kable_styling(bootstrap_options = c("striped", "hover"))
+# }
 
+# extract stats from reliability output
+
+get_alpha_row_from_obj <- function(alpha_obj, scale_name) {
+  # 1. Extract dimensions
+  # 'nvar' is the number of items, 'nobs' is the total observations
+  k <- alpha_obj$nvar
+  n <- max(alpha_obj$nobs, na.rm = TRUE)
+  
+  # 2. Extract Reliability Metrics
+  alpha_val <- round(alpha_obj$total$raw_alpha, 2)
+  
+  # Using Feldt Confidence Interval
+  low <- round(alpha_obj$conf.int[1, "lower"], 2)
+  up  <- round(alpha_obj$conf.int[1, "upper"], 2)
+  
+  avg_r <- round(alpha_obj$total$average_r, 2)
+  
+  # 3. Extract Descriptive Statistics
+  mean_val <- round(alpha_obj$total$mean, 2)
+  sd_val   <- round(alpha_obj$total$sd, 2)
+  
+  # 4. Format into a row
+  tibble(
+    `Scale Name` = scale_name,
+    `Num Items` = k,
+    `Valid n` = n,
+    `Raw Alpha (95% CI)` = paste0(alpha_val, " [", low, ", ", up, "]"),
+    `Average r` = avg_r,
+    `Mean (SD)` = paste0(mean_val, " (", sd_val, ")")
+  )
+}
 
 
 
