@@ -163,24 +163,23 @@ extract_alpha_results <- function(alpha_obj, scale_name) {
 }
 
 
-extract_item_stats <- function(data, alpha_obj){
+extract_item_stats <- function(data, alpha_obj, scale_prefix = NULL, cap = NULL){
   # get the item names from the alpha object
   item_names <- rownames(alpha_obj$item.stats)
   
-  # calculate medians for each item
-  medians <- data %>%
-    dplyr::select(all_of(item_names)) %>%
-    summarise(across(everything(), ~median(.x, na.rm = TRUE))) %>%
-    pivot_longer(everything(), names_to = "item", values_to = "median")
+  if(!is.null(scale_prefix)){
+    data <- data %>% select(starts_with(scale_prefix))
+  }
+  # describe distribution for each item
+  sum <- psych::describe(data) %>% 
+    as.data.frame() %>% 
+    rownames_to_column("item")
   
   # extract stats from alpha_obj
   item_stats_df <- alpha_obj$item.stats %>%
     as.data.frame() %>%
     rownames_to_column("item") %>%
-    mutate(
-      `mean_sd` = paste0(round(mean, 2), " (", round(sd, 2), ")")
-    ) %>%
-    select(item, n, mean_sd, r.drop)
+    select(item, r.drop)
   
   alpha_drop_df <- alpha_obj$alpha.drop %>%
     as.data.frame() %>%
@@ -189,40 +188,34 @@ extract_item_stats <- function(data, alpha_obj){
     rename(alpha_if_dropped = raw_alpha)
   
   # join components
-  final_item_table <- item_stats_df %>%
-    left_join(medians, by = "item") %>%
-    left_join(alpha_drop_df, by = "item") %>%
+  final_item_table <- sum %>%
+    left_join(item_stats_df, by = "item") %>%
+    left_join(alpha_drop_df, by = "item") 
+  
+  # printing summary table
+  final_item_table %>% 
     mutate(
-      across(c(r.drop, alpha_if_dropped), ~round(.x, 2))
+      mean_sd = paste0(round(mean, 2), " (", round(sd, 2), ")"),
+      med_mad = paste0(median," (", round(mad, 2), ")"),
+      range = paste0("(", min, ", ", max, ")")
     ) %>%
-    dplyr::select(
-      Item = item,
-      `Valid n` = n,
-      Median = median,
-      `Mean (SD)` = mean_sd,
-      `Corrected Item-Total r` = r.drop,
-      `Alpha if Dropped` = alpha_if_dropped
-    )
+    select(item,
+           `Valid n` = n,
+           `Mean (SD)` = mean_sd,
+           `Median (MAD)` = med_mad,
+           Range = range,
+           Skew = skew,
+           Kurtosis = kurtosis,
+           `Corrected Item-Total r` = r.drop,
+           `Alpha if Dropped` = alpha_if_dropped) %>% 
+    kable(format = "html",
+          caption = cap, 
+          digits = 2) %>%
+    kable_styling(bootstrap_options = c("striped", "hover")) %>% 
+    print()
   
-  return(final_item_table)
+  return(invisible(final_item_table))
 }
-
-
-# ----- EDA ----- #
-describe_scale <- function(data, scale_prefix = NULL, cap = NULL){
-  if(!is.null(scale_prefix)){
-    data <- data %>% select(starts_with(scale_prefix))
-  }
-  
-  sum <- psych::describe(data)
-  sum %>% 
-    knitr::kable(format = "html",
-                 digits = 2,
-                 caption = cap) %>% 
-    kable_styling(bootstrap_options = c("striped", "hover"))
-}
-
-
 
 
 
