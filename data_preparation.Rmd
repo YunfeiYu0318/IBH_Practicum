@@ -29,6 +29,12 @@ library(gt)
 library(forcats)
 library(stringr)
 library(psych)
+# library(polycor)
+library(ggcorrplot)
+library(ggplot2)
+
+# for saving output
+library(here)
 ```
 
 ```{r import helper functions, message=FALSE}
@@ -361,8 +367,6 @@ get_category_summary(data = demog_final, caption = "Distribution by Demographic 
 
 Check distributions of each scale items before converting 8 to NA.
 
-#### Exploration
-
 ```{r explore scale distribution}
 plt_scale_dist(data = scale_df, prefix = "explore_")
 ```
@@ -485,6 +489,57 @@ ols_item_summary <- extract_item_stats(data = scale_converted,
                                        scale_prefix = "ols",
                                        cap = "OLS Item Summary (Scale Raw Alpha = 0.92)")
 ```
+
+### Polychoric Correlation
+
+```{r polychoric correlation}
+# define item vectors
+explore_items <- scale_converted %>% select(starts_with("explore")) %>% colnames()
+expoit_items <- scale_converted %>% select(starts_with("exploit")) %>% colnames()
+deimp_items <- scale_converted %>% select(starts_with("deimp")) %>% colnames()
+
+all_items <- c(explore_items, expoit_items, deimp_items)
+
+# calculate the polychoric correlation matrix
+poly_results <- psych::polychoric(scale_converted[, all_items], na.rm = TRUE)
+poly_matrix  <- poly_results$rho
+
+
+# setup clean labels for the matrix
+clean_labels <- c(
+  c(paste("Explore", 1:7), paste("Explore def", 1:2)),
+  c(paste("Exploit", 1:6), paste("Exploit def", 1:2)),
+  c(paste("Deimplement", 1:4), paste("Deimplement def", 1:2))
+)
+
+rownames(poly_matrix) <- clean_labels
+colnames(poly_matrix) <- clean_labels
+
+# create the Corrplot
+poly_matrix %>% ggcorrplot(type = "full",
+                           outline.col = "white",
+                           colors = c("#E46726", "white", "#6D9EC1"),
+                           legend.title = "Polychoric Correlation",
+                           tl.cex = 8) +
+  # add boxes to show groups
+  geom_rect(aes(xmin = 0.5, xmax = 9.5, ymin = 0.5, ymax = 9.5),
+            fill = NA, color = "royalblue3", size = 0.5) +
+  geom_rect(aes(xmin = 9.5, xmax = 17.5, ymin = 9.5, ymax = 17.5),
+            fill = NA, color = "royalblue3", size = 0.5) +
+  geom_rect(aes(xmin = 17.5, xmax = 23.5, ymin = 17.5, ymax = 23.5),
+            fill = NA, color = "royalblue3", size = 0.5) + 
+  labs(x = "", y = "", 
+       caption = "Figure1: Polychoric correlation matrix for exploration, exploitation and deimplementaion") +
+  theme_minimal() + 
+  theme(
+    plot.caption = element_text(hjust = 0.5, size = 9, colour = "darkgrey"),
+    axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 7),
+    )
+```
+
 
 # Create Final Dataset
 
