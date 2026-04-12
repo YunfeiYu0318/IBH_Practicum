@@ -103,37 +103,6 @@ get_category_summary <- function(data, caption = NULL, id = NULL){
     tab_options(table.width = pct(100))
 }
 
-# Summary stats for checkbox variables (n and percentage)
-
-# get_checkbox_summary <- function(data, prefix, colname, caption = NULL, id = NULL){
-#   # colname = the name for the first column
-#   if(!is.null(id)){
-#     data <- data %>% select(-any_of(id))
-#   }
-#   
-#   data %>% 
-#     select(starts_with(prefix)) %>% 
-#     summarise(across(everything(), list(
-#       # Calculate Count (n)
-#       n = \(x) sum(x == 1, na.rm = TRUE),
-#       # Calculate Percentage
-#       Perc = \(x) round(mean(x, na.rm = TRUE), 4) * 100
-#     ))) %>% 
-#     pivot_longer(
-#       everything(),
-#       names_to = c("Category", ".value"),
-#       names_pattern = paste0(prefix, "(.*)_(Perc|n)")
-#     ) %>%
-#     # Clean up the category names (remove leading underscores if they exist)
-#     mutate(Category = str_remove(Category, "^_")) %>%
-#     arrange(desc(Perc)) %>% 
-#     kable(digits = 2,
-#           col.names = c(colname, "Group Size", "Frequency (%)"),
-#           caption = caption,
-#           format = "html") %>% 
-#     kable_styling(bootstrap_options = c("striped", "hover"))
-# }
-
 # extract stats from reliability output
 
 extract_alpha_results <- function(alpha_obj, scale_name) {
