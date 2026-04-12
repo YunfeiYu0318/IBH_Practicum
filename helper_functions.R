@@ -137,11 +137,7 @@ get_category_summary <- function(data, caption = NULL, id = NULL){
 # extract stats from reliability output
 
 extract_alpha_results <- function(alpha_obj, scale_name) {
-  # 1. Extract Valid n from the 'total' component
-  n <- alpha_obj$total$nobs
-  
-  # 2. Extract Feldt Confidence Intervals from the list structure
-  # Based on your screenshot: explore_alpha$feldt$lower.ci
+  # Extract Feldt CI
   if (!is.null(alpha_obj$feldt)) {
     low <- round(alpha_obj$feldt$lower.ci, 2)
     up  <- round(alpha_obj$feldt$upper.ci, 2)
@@ -150,17 +146,16 @@ extract_alpha_results <- function(alpha_obj, scale_name) {
     ci_label <- "(N/A)"
   }
   
-  # 3. Extract other stats from 'total'
+  # Extract other stats
   alpha_val <- round(alpha_obj$total$raw_alpha, 2)
-  avg_r     <- round(alpha_obj$total$average_r, 2)
-  mean_val  <- round(alpha_obj$total$mean, 2)
-  sd_val    <- round(alpha_obj$total$sd, 2)
+  avg_r <- round(alpha_obj$total$average_r, 2)
+  mean_val <- round(alpha_obj$total$mean, 2)
+  sd_val <- round(alpha_obj$total$sd, 2)
   
-  # 4. Final Output Table
+  # Final Output Table
   tibble(
     `Scale Name` = scale_name,
-    `Num Items` = alpha_obj$nvar,
-    `Valid n` = n,
+    `N Items` = alpha_obj$nvar,
     `Raw Alpha (95% CI)` = paste0(alpha_val, " ", ci_label),
     `Average r` = avg_r,
     `Mean (SD)` = paste0(mean_val, " (", sd_val, ")")
