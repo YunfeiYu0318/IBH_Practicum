@@ -516,3 +516,7 @@ final_data %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
+```{r save final data}
+saveRDS(final_data, "Data/oath_data.rds")
+```
+
