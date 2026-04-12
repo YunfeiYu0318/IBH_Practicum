@@ -208,7 +208,19 @@ extract_item_stats <- function(data, alpha_obj){
 }
 
 
-
+# ----- EDA ----- #
+describe_scale <- function(data, scale_prefix = NULL, cap = NULL){
+  if(!is.null(scale_prefix)){
+    data <- data %>% select(starts_with(scale_prefix))
+  }
+  
+  sum <- psych::describe(data)
+  sum %>% 
+    knitr::kable(format = "html",
+                 digits = 2,
+                 caption = cap) %>% 
+    kable_styling(bootstrap_options = c("striped", "hover"))
+}
 
 
 
