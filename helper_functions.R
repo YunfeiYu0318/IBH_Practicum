@@ -186,7 +186,19 @@ extract_item_stats <- function(data, alpha_obj, scale_prefix = NULL, cap = NULL)
   return(invisible(final_item_table))
 }
 
-
+# ---------- CFA Metrics ------------- #
+get_fit_metrics <- function(fit_obj, model_name) {
+  metrics <- fitMeasures(fit_obj, c("chisq", "df", "pvalue", "cfi", "tli", "rmsea", "srmr"))
+  data.frame(
+    Model = model_name,
+    Chisq = round(metrics["chisq"], 3),
+    Df = metrics["df"],
+    CFI = round(metrics["cfi"], 3),
+    TLI = round(metrics["tli"], 3),
+    RMSEA = round(metrics["rmsea"], 3),
+    SRMR = round(metrics["srmr"], 3)
+  )
+}
 
 
 
