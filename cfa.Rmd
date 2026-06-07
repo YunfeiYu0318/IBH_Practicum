@@ -1,5 +1,5 @@
 ---
-title: "Analysis"
+title: "Confirmatory Factor Analysis"
 author: "Yunfei Yu"
 date: "2026-04-17"
 output: html_document
@@ -28,7 +28,7 @@ source("helper_functions.R")
 ```
 
 ```{r load data}
-oath_data <- readRDS("data/oath_data.rds")
+oath_data <- readRDS("Data/oath_data.rds")
 
 # make sure 8=N/A is converted to missing
 oath_data <- oath_data %>%
