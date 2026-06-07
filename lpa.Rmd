@@ -1,0 +1,135 @@
+---
+title: "Latent Profile Analysis"
+author: "Yunfei Yu"
+date: "2026-06-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r library, message=FALSE}
+library(tidyverse)
+library(tidyLPA)
+library(ggplot2)
+```
+
+```{r import helper functions, message=FALSE}
+source("helper_functions.R")
+```
+
+```{r load data}
+oath_data <- readRDS("Data/oath_data_fa_final.rds")
+lpa_data <- oath_data %>% 
+  select(Explore, Exploit, Deimplement) %>% 
+  drop_na()
+
+dim(oath_data)
+```
+
+
+# Fit LPA
+
+```{r fit lpa}
+# Fit Model 1 (Equal variances)
+models_1_fit <- lpa_data %>% estimate_profiles(n_profiles = 1:5, models = 1)
+
+# Fit Model 2 (Varying variances)
+models_2_fit <- lpa_data %>% estimate_profiles(n_profiles = 1:5, models = 2)
+
+# Print the fit indices table
+models_1_fit
+models_2_fit
+```
+
+- Model 2 generally give lower AIC/BIC and higher Entropy than Model 1
+
+- 4 profiles is the optimal in terms of AIC/BIC and Entropy, but risks of having a very small size for profile 4 (n_min = 0.05 (about 9 person))
+
+- 3 profile model is the second optimal choice
+
+# Comparison
+
+```{r plot 3 profiles}
+# profile_3 <- lpa_models[[3]]
+# profile_4 <- lpa_models[[4]]
+# 
+# # Now plot them side-by-side
+# plot_profiles(profile_3)
+# plot_profiles(profile_4)
+```
+
+## Line plots
+
+```{r cleaner plot}
+# std mean score: std dev from the mean
+
+# Plot the 3-profile solution
+plot_lpa_profiles(lpa_models[[3]], plot_title = "LPA: 3-Profile Solution")
+
+# Plot the 4-profile solution
+plot_lpa_profiles(lpa_models[[4]], plot_title = "LPA: 4-Profile Solution")
+```
+
+
+```{r check profile size}
+get_profile_sizes(lpa_models[[3]])
+get_profile_sizes(lpa_models[[4]])
+```
+
+
+### 3-Profile Model
+
+Pros: 
+- Stable Group Sizes: more balanced distribution (46%, 43%, and 11%).
+
+- Methodologically Sound: The smallest group has $N = 17$, maintaining adequate statistical power for downstream analysis.
+
+- Clear Interpretation: Yields clean, non-crossing trajectories representing distinct, actionable strategies.
+
+Cons: 
+
+-Higher AIC/BIC and lower entropy than the 4-profile model.
+
+### 4-Profile Model
+
+Pros: 
+- Best statistical fit, with the lowest AIC/BIC and highest Entropy.
+
+Cons: 
+
+- Small groups: Over-splits the 11% group into two tiny subgroups of $N = 7$ (4.5%) and $N = 10$ (6.5%). Groups this small lack statistical power for future hypothesis testing and are often artifacts of outlier noise.
+
+- Confusion: Profiles cross on the plot, creating overly complex interaction narratives.
+
+
+# LPA Results
+
+(Based on 3-profile model)
+
+- **Profile 1 - The Status-Quo** (N = 71, 46%): Slightly above average across all three dimensions. Highly consistent, average-level effort allocation across de-implementation, exploration and exploitation.
+
+- **Profile 2 - De-implementation Drivers** (N = 17, 11%): Above average across all three dimensions. Scores exceptionally high on deimplementation, and also the highest on exploration and exploitation. 
+
+- **Profile 3 - Restrained** (N = 65, 42%): Below average across all three dimensions. Scores exceptionally low on deimplementation. Allocating more effort towards exploitation.
+
+
+# Store output
+
+```{r}
+profile_assignments <- lpa_models[[3]]$model$classification
+
+regression_data <- oath_data %>%
+  mutate(
+    Profile = factor(profile_assignments)
+  )
+
+dim(regression_data)
+
+saveRDS(regression_data, "Data/regression_data.rds")
+```
+
+
+
+
