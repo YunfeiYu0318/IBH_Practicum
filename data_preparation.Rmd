@@ -53,6 +53,9 @@ raw_data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx") %>%
 # check if record_id is unique
 nrow(raw_data) == n_distinct(raw_data$record_id)
 
+# drop if all explore, exploit, deimp items are missing
+raw_data <- raw_data %>% filter(if_any(starts_with(c("explore_", "exploit_", "deimplement_")), ~ !is.na(.)))
+
 # check dimension
 dim(raw_data)
 ```
@@ -344,8 +347,8 @@ scale_df <- scale_df %>%
   )
 
 # drop observations with >50% missing rate or >50% "Not Applicable"
-scale_df <- scale_df %>% 
-  filter(missing_rate <= 0.5 & prop_8 <= 0.5)
+# scale_df <- scale_df %>% 
+#   filter(missing_rate <= 0.5 & prop_8 <= 0.5)
 # nrow(scale_df)
 
 # check missing pattern in the remaining data
@@ -397,7 +400,8 @@ Note 2: `explore_innov_def_1`, `explore_innov_def_2`, `exploit_innov_def_1` and 
 ```{r}
 # convert 8 to missing
 scale_converted <- scale_df %>% 
-  mutate(across(-record_id, ~na_if(., 8)))
+  mutate(across(-record_id, ~na_if(., 8))) %>% 
+  filter(if_any(starts_with(c("explore_", "exploit_", "deimplement_")), ~ !is.na(.)))
 ```
 
 
@@ -516,7 +520,7 @@ rownames(poly_matrix) <- clean_labels
 colnames(poly_matrix) <- clean_labels
 
 # create the Corrplot
-poly_matrix %>% ggcorrplot(type = "full",
+corrp <- poly_matrix %>% ggcorrplot(type = "full",
                            outline.col = "white",
                            colors = c("#E46726", "white", "#6D9EC1"),
                            legend.title = "Polychoric Correlation",
@@ -532,12 +536,23 @@ poly_matrix %>% ggcorrplot(type = "full",
        caption = "Figure1: Polychoric correlation matrix for exploration, exploitation and deimplementaion") +
   theme_minimal() + 
   theme(
-    plot.caption = element_text(hjust = 0.5, size = 9, colour = "darkgrey"),
+    plot.caption = element_text(hjust = 0.5, size = 9, colour = "grey"),
     axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 7),
     axis.text.y = element_text(size = 7),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 7),
     )
+
+# save 
+ggsave(
+  filename = "Plots/correlation_plot.png", 
+  plot = corrp, 
+  device = "png",
+  units = "in", 
+  width = 8, 
+  height = 8, 
+  dpi = 300  # Use 600 for ultra-high resolution
+)
 ```
 
 
