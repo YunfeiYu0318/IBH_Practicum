@@ -201,6 +201,61 @@ get_fit_metrics <- function(fit_obj, model_name) {
 }
 
 
+# ----------- LPA Results and Plots ------------- #
 
+plot_lpa_profiles <- function(lpa_model, plot_title = "Latent Profile Analysis") {
+  
+  # Extract the means matrix from the underlying mclust model object
+  if (!"model" %in% names(lpa_model) || !"parameters" %in% names(lpa_model$model)) {
+    stop("The provided object does not appear to be a valid tidyLPA/mclust model slot.")
+  }
+  
+  means_matrix <- lpa_model$model$parameters$mean
+  
+  # Reshape the matrix into a tidy dataframe for ggplot
+  tidy_plot_data <- as.data.frame(means_matrix) %>%
+    rownames_to_column(var = "Indicator") %>%
+    pivot_longer(
+      cols = -Indicator, 
+      names_to = "Profile", 
+      values_to = "Mean_Score"
+    ) %>%
+    mutate(Profile = str_remove(Profile, "V")) # Converts "V1", "V2" to "1", "2"
+  
+  # Generate the clean line plot
+  ggplot(tidy_plot_data, aes(x = Indicator, y = Mean_Score, group = Profile, color = Profile)) +
+    geom_line(aes(linetype = Profile), size = 1.2) + 
+    geom_point(aes(shape = Profile), size = 1.5) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "gray60", alpha = 0.7) +
+    scale_y_continuous(limits = c(-2.5, 2.5), breaks = seq(-2, 2, by = 0.5)) + 
+    labs(
+      title = plot_title,
+      x = "Factor scores",
+      y = "Std. Mean Score",
+      color = "Profile",
+      shape = "Profile",
+      linetype = "Profile"
+    ) +
+    theme_minimal() +
+    theme(
+      panel.grid.minor = element_blank(),
+      legend.position = "bottom",
+      text = element_text(size = 10),
+      axis.text = element_text(face = "bold", size = 8),
+      plot.title = element_text(face = "bold", size = 10)
+    )
+}
+
+
+get_profile_sizes <- function(lpa_model) {
+  # 1. Extract raw classification vector
+  class_vector <- lpa_model$model$classification
+  
+  # 2. Build the dataframe explicitly from the vector
+  data.frame(Profile = class_vector) %>%
+    group_by(Profile) %>%
+    summarise(N = n(), .groups = "drop") %>%
+    mutate(Percentage = round((N / sum(N)) * 100, 2))
+}
 
 
