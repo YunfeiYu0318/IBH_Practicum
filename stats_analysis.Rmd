@@ -1,0 +1,371 @@
+---
+title: "Analysis"
+author: "Yunfei Yu"
+date: "2026-04-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load Data
+
+```{r libraries, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(psych)
+library(lavaan)
+library(semPlot)
+library(ggplot2)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+```
+
+
+```{r load data}
+oath_data <- readRDS("data/oath_data.rds")
+
+# make sure 8=N/A is converted to missing
+oath_data <- oath_data %>%
+  mutate(across(starts_with(c("explore_", "exploit_", "deimplement_")), 
+                ~na_if(., 8))) %>% 
+  filter(if_any(starts_with(c("explore_", "exploit_", "deimplement_")), ~ !is.na(.)))
+
+
+# oath_data <- oath_data %>% 
+#   drop_na(all_of(
+#     starts_with(c("explore", "exploit", "deimplement"))
+#   ))
+
+dim(oath_data)
+```
+
+
+# CFA
+
+```{r fit cfa}
+# extract relevant column names
+explore_items <- oath_data %>% select(starts_with("explore")) %>% select(-contains("def")) %>% colnames()
+exploit_items <- oath_data %>% select(starts_with("exploit")) %>% select(-contains("def")) %>% colnames()
+deimp_items <- oath_data %>% select(starts_with("deimpl")) %>% select(-contains("def")) %>% colnames() 
+
+# create model strs 
+explore_items_str <- paste(explore_items, collapse = " + ")
+exploit_items_str <- paste(exploit_items, collapse = " + ")
+deimp_items_str <- paste(deimp_items, collapse = " + ")
+
+
+# full model str
+
+# Model 1:  3-factor model with exploration, exploitation and de-implementation
+# as distinct dimensions
+m3f <- paste0(
+  'Exploration =~ ', explore_items_str, '\n',
+  'Exploitation =~ ', exploit_items_str, '\n',
+  'De_implement =~ ', deimp_items_str
+)
+
+# Model 2: 2-factor model with de-imp merged with exploitation 
+m2f_exploit <- paste0(
+  'Exploration =~ ', explore_items_str, '\n',
+  'Merged_Factor =~ ', paste(c(exploit_items, deimp_items), collapse = " + ")
+)
+
+# Model 3: 2-factor model with de-imp merged with exploration
+m2f_explore <- paste0(
+  'Exploitation =~ ', exploit_items_str, '\n',
+  'Merged_Factor =~ ', paste(c(explore_items, deimp_items), collapse = " + ")
+)
+
+# Model 4: 1-factor model with all items merged together
+m1f <- paste0(
+  'General_Factor =~ ', paste(c(explore_items, exploit_items, deimp_items), collapse = " + ")
+)
+
+# Fit the models and compare results
+fit3f <- cfa(m3f, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit2f_exploit <- cfa(m2f_exploit, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit2f_explore <- cfa(m2f_explore, data = oath_data,ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit1f <- cfa(m1f, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+
+# Compare 3-factor vs. De-imp/Exploit merge
+comp_exploit <- lavTestLRT(fit3f, fit2f_exploit)
+
+# Compare 3-factor vs. De-imp/Explore merge
+comp_explore <- lavTestLRT(fit3f, fit2f_explore)
+
+# Compare 3-factor vs. 1-factor model
+comp_1f <- lavTestLRT(fit3f, fit1f)
+```
+
+
+## Preliminary CFA Results
+
+```{r 3f model summary}
+summary(fit3f)
+```
+
+```{r cfa comparison results 1}
+comp_exploit
+```
+
+```{r cfa comparison results 2}
+comp_explore
+```
+
+- The 3-factor model with exploration, exploitation and de-implementation as three distinct pillars fits significantly better than either of the 2 factor models, and achieving lower AIC and BIC in both cases.
+
+```{r}
+comp_1f
+```
+
+## Loadings plot full
+
+```{r loadings plot, fig.height=20}
+# # Generate the plot
+# png("Plots/CFA_Plot.png", width = 12, height = 10, units = "in", res = 300)
+# 
+# semPaths(fit3f, 
+#          whatLabels = "std",       # Standardized loadings
+#          layout = "tree2",         # Factors left, items right
+#          rotation = 2,             # Horizontal layout
+#          
+#          # --- Spacing and Sizing ---
+#          nCharNodes = 0,           # Don't truncate item names
+#          sizeLat = 10,             # Size of factor ovals
+#          sizeMan = 5,              # Smaller boxes for 23 items
+#          edge.label.cex = 0.8,     # Smaller loading numbers to avoid overlap
+#          
+#          # --- Aesthetic ---
+#          style = "lisrel",         # Professional black and white look
+#          color = "white",
+#          edge.color = "black",
+#          shapeLat = "ellipse",
+#          shapeMan = "rectangle",
+#          
+#          # --- Cleaning ---
+#          residuals = FALSE,        # Hide error terms (arrows pointing to items)
+#          intercepts = FALSE,       # Hide mean triangles
+#          curvePivot = TRUE,        # Curve the correlations
+#          
+#          mar = c(3, 10, 3, 15))    # Large margins for long item names
+# 
+# dev.off() # Save the file    # Adjust margins to prevent clipping
+```
+
+
+## Refine CFA Model
+
+- Drop items with loadings < 0.3
+
+```{r small loading items}
+# Get standardized parameters
+params <- standardizedSolution(fit3f)
+
+# find items where the loading is < 0.3
+low_loading_items <- params %>%
+  filter(op == "=~", est.std < 0.3) %>%
+  select(rhs) %>%
+  pull()
+
+print(paste("Dropping items:", paste(low_loading_items, collapse = ", ")))
+```
+
+
+```{r refit cfa}
+clean_explore <- setdiff(explore_items, low_loading_items)
+clean_exploit <- setdiff(exploit_items, low_loading_items)
+clean_deimp <- setdiff(deimp_items, low_loading_items)
+
+# define model syntax
+m3f_syntax <- paste0(
+  'Exploration =~ ', paste(clean_explore, collapse = " + "), '\n',
+  'Exploitation =~ ', paste(clean_exploit, collapse = " + "), '\n',
+  'Deimplementation =~ ', paste(clean_deimp, collapse = " + ")
+)
+
+# 2-factor (merging exploit and deimp)
+m2f_syntax_exploit <- paste0(
+  'Exploration =~ ', paste(clean_explore, collapse = " + "), '\n',
+  'Merged_Factor =~ ', paste(c(clean_exploit, clean_deimp), collapse = " + ")
+)
+
+# 2-factor (merging explore and deimp)
+m2f_syntax_explore <- paste0(
+  'Exploitation =~ ', paste(clean_exploit, collapse = " + "), '\n',
+  'Merged_Factor =~ ', paste(c(clean_explore, clean_deimp), collapse = " + ")
+)
+
+# Fit the Clean Models
+fit3f_clean <- cfa(m3f_syntax, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit2f_clean_exploit <- cfa(m2f_syntax_exploit, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit2f_clean_explore <- cfa(m2f_syntax_explore, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+```
+
+```{r rerun cfa comparison 1}
+# 3f vs exploit-deimp merge
+lavTestLRT(fit3f_clean, fit2f_clean_exploit)
+```
+
+```{r rerun cfa comparison 2}
+# 3f vs explore-deimp merge
+lavTestLRT(fit3f_clean, fit2f_clean_explore)
+```
+
+
+```{r final model fit}
+# 1. Run the LRTs (Comparing 2-factor models against the 3-factor gold standard)
+lrt_exploit <- lavTestLRT(fit2f_clean_exploit, fit3f_clean)
+lrt_explore <- lavTestLRT(fit2f_clean_explore, fit3f_clean)
+
+# 2. Extract and combine fit measures into a single data frame
+fit_metrics <- c("df", "chisq", "cfi", "tli", "rmsea", "srmr")
+
+summary_table <- bind_rows(
+  as_tibble(as.list(fitMeasures(fit3f_clean, fit_metrics))) %>% 
+    mutate(Model = "3-Factor"),
+  as_tibble(as.list(fitMeasures(fit2f_clean_exploit, fit_metrics))) %>% 
+    mutate(Model = "2-Factor<br>(Exploit-DI Merge)"),
+  as_tibble(as.list(fitMeasures(fit2f_clean_explore, fit_metrics))) %>% 
+    mutate(Model = "2-Factor<br>(Explore-DI Merge)")
+)
+
+# 3. Add the LRT p-values
+# The p-value for the nested model is in the 2nd row of the lavTestLRT output
+summary_table <- summary_table %>%
+  mutate(
+    `LRT p-val` = c(
+      NA, 
+      lrt_exploit$`Pr(>Chisq)`[2], 
+      lrt_explore$`Pr(>Chisq)`[2]
+    )
+  ) %>%
+  select(Model, df, chisq, `LRT p-val`, everything())
+
+# 4. Final Formatting for your poster/report
+summary_table %>%
+  mutate(across(where(is.numeric), ~ round(., 3))) %>%
+  mutate(`LRT p-val` = case_when(
+    is.na(`LRT p-val`) ~ "",
+    `LRT p-val` < 0.001 ~ "< .001",
+    TRUE ~ as.character(`LRT p-val`)
+  )) %>%
+  kable(caption = "Table 1: CFA Model Fit Statistics and Nested Model Comparisons",
+        digits = 3,
+        col.names = c("Model", "Df", "Chisq", "LRT p-value", "CFI", "TLI", "RMSEA", "SRMR"),
+        align = "c",
+        format = "html",
+        escape = FALSE) %>% 
+  kable_styling(bootstrap_options = c("striped", "hover")) %>% 
+  add_header_above(c(" " = 1, "Model Fit" = 3, "Incremental Fit" = 2, "Residual Fit" = 2))
+```
+
+
+
+## Loadings plot reduced
+
+```{r renaming cols for readability}
+# clean up explore & exploit item names for plot readability
+explore_names <- c("ER1", "ER2", "ER3", "ER5", "ER6") #  "ER_def1", "ER_def2"
+exploit_names <- c("ET1", "ET2", "ET3", "ET5", "ET4", "ET6")
+deimp_names <- c("DI1", "DI2", "DI3", "DI4") # "DI_def1", "DI_def2"
+
+# update plot labels
+# map original names to these new clean labels
+explore_map <- setNames(explore_names, clean_explore)
+exploit_map <- setNames(exploit_names, clean_exploit)
+deimp_map <- setNames(deimp_names, clean_deimp)
+
+# get the order of nodes from the lavaan object
+actual_order <- row.names(inspect(fit3f_clean, "free")$lambda) 
+latents <- slot(fit3f_clean, "Model")@dimNames[[1]][[2]]
+all_factors <- c(actual_order, latents)
+
+# create a lookup table for clean labels
+lookup_table <- c(
+  "Deimplementation" = "Deimplementation", 
+  "Exploitation" = "Exploitation", 
+  "Exploration" = "Exploration",
+  explore_map, 
+  exploit_map, 
+  deimp_map
+)
+
+# create the final vector by looking up the labels in the correct order
+final_node_labels <- ifelse(all_factors %in% names(lookup_table), 
+                            lookup_table[all_factors], 
+                            all_factors)
+```
+
+
+```{r reduced loadings plot}
+groups_list <- list(Explore = clean_explore, 
+                    Exploit = clean_exploit, 
+                    Deimp = clean_deimp)
+
+png("Plots/Clean_CFA.png", width = 10, height = 8, units = "in", res = 300)
+
+semPaths(fit3f_clean,  
+         nodeLabels = final_node_labels,
+         whatLabels = "std",     # standardized loadings
+         layout = "tree2",     
+         style = "lisrel",
+         nCharNodes = 0, 
+         residuals = FALSE, 
+         intercepts = FALSE,
+         rotation = 2,
+         thresholds = FALSE,
+         
+         # --- Sizing ---
+         sizeLat = 14, 
+         sizeMan = 6, 
+         sizeLat2 = 5,
+         sizeMan2 = 3,
+         label.cex = 0.9,
+         label.prop = 0.8,
+         edge.label.cex = 0.6,
+         edge.width = 0.5,
+
+         # --- Grouping  ---
+         edge.color = "#1A1953",
+         groups = groups_list, 
+         color = c("#ebf3f7", "#EFF5D0", "#ffe4c2"),
+         legend = FALSE,
+
+         # --- Spacing ---
+         curvePivot = TRUE,      # Smooth curves for factor correlations
+         
+         # Left, Top, Bottom, Right
+         # Setting a large left margin (20) to ensure items are not cut off.
+         mar = c(3, 20, 3, 10)) 
+
+dev.off() # Close the graphics device and save the file
+```
+
+
+## Factor scores 
+
+```{r factor scores}
+# Extract factor scores
+factor_scores <- lavPredict(fit3f_clean)
+
+# Convert to a dataframe and merge with oath_data
+factor_scores_df <- as.data.frame(factor_scores)
+
+# standardize
+factor_scores_df <- factor_scores_df %>%
+  mutate(across(c(Exploration, Exploitation, Deimplementation), 
+                ~as.numeric(scale(.))))
+
+# merge this back to your original data for the LPA
+data_fa_scores <- cbind(oath_data, factor_scores_df)
+
+saveRDS(data_fa_scores, "Data/oath_data_fa.rds")
+```
+
+```{r}
+
+```
+
