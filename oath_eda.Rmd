@@ -1,0 +1,205 @@
+---
+title: "OATH Exploratory Data Analysis"
+author: "Yunfei Yu"
+date: "2026-04-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r library and helper}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(plotly)
+library(GGally)
+
+source("helper_functions.R")
+```
+
+```{r load data}
+oath_data <- readRDS("Data/oath_data.rds")
+dim(oath_data)
+```
+
+# Mean Scores
+
+Note: LPA uses latent factor scores from CFA. Before running CFA, we use individual's mean scores for each scale as a proxy to explore trends and patterns.
+
+## Learning Orientation
+
+Examine relationships among exploration, exploitation and de-implementation scores and examine any clusters.
+
+```{r mean score scatterplot}
+# # calculate mean score for each of the learning scales
+# data_eda <- oath_data %>% 
+#   mutate(
+#     mean_explore = rowMeans(select(., all_of(starts_with("explore"))), na.rm = TRUE),
+#     mean_exploit = rowMeans(select(., all_of(starts_with("exploit"))), na.rm = TRUE),
+#     mean_deimp = rowMeans(select(., all_of(starts_with("deimp"))), na.rm = TRUE)
+#   )
+# 
+# # 3D scatter plot
+# plot_ly(data_eda, x = ~mean_explore, y = ~mean_exploit, z = ~mean_deimp, 
+#         type = 'scatter3d', mode = 'markers',
+#         marker = list(size = 3, opacity = 0.6)) %>%
+#   layout(title = "3D Distribution of Learning Orientations")
+```
+
+
+
+```{r lpa parallel coordinates plot}
+# # define patterns, used for coloring
+# data_eda <- data_eda %>%
+#   mutate(pattern = case_when(
+#     # High-Low-High
+#     mean_explore > mean(mean_explore, na.rm = TRUE) &
+#     mean_exploit < mean(mean_exploit, na.rm = TRUE) &
+#     mean_deimp > mean(mean_deimp, na.rm = TRUE) ~ "High-Low-High",
+# 
+#     # Low-High-Low
+#     mean_explore < mean(mean_explore, na.rm = TRUE) &
+#     mean_exploit > mean(mean_exploit, na.rm = TRUE) &
+#     mean_deimp < mean(mean_deimp, na.rm = TRUE) ~ "Low-High-Low",
+# 
+#     TRUE ~ "Other"
+#   ))
+# 
+# p <- data_eda %>%
+#   select(mean_explore, mean_exploit, mean_deimp, pattern) %>%
+#   ggparcoord(columns = 1:3,
+#              groupColumn = "pattern",
+#              scale = "std",
+#              showPoints = TRUE,
+#              alphaLines = 0.4) +
+#   scale_color_manual(values = c(
+#     "High-Low-High" = "#E41A1C", # Red
+#     "Low-High-Low" = "#377EB8",  # Blue
+#     "Other" = "gray80" # Light gray for the background noise
+#   )) +
+#   scale_x_discrete(labels = c(
+#     "mean_explore" = "Exploration",
+#     "mean_exploit" = "Exploitation",
+#     "mean_deimp"  = "De-implementation"
+#   )) +
+#   labs(color = "Pattern",
+#        x = "Average Scores") + 
+#   theme_minimal() + 
+#   theme(
+#     plot.caption = element_text(hjust = 0, size = 9, colour = "darkgrey"),
+#     legend.position = "top"
+#     )
+# 
+# # save 
+# ggsave(
+#   filename = "Plots/learning_pattern.png",
+#   plot = p,
+#   device = "png",
+#   units = "in",
+#   width = 12,
+#   height = 8,
+#   dpi = 300  # Use 600 for ultra-high resolution
+# )
+
+```
+
+```{r bivariate density plots}
+# data_eda %>% ggplot(aes(x = mean_explore, y = mean_deimp)) +
+#   geom_bin2d(bins = 20) +
+#   scale_fill_viridis_c() +
+#   labs(title = "Density: Exploration vs. Unlearning",
+#        subtitle = "Darker areas indicate potential Latent Profile centers") +
+#   theme_minimal()
+```
+
+## Potential Subgroup vs. OCIS
+
+```{r}
+# data_eda <- data_eda %>%
+#   rowwise() %>%
+#   mutate(mean_ocis = mean(c_across(starts_with("ocis")), na.rm = TRUE)) %>%
+#   ungroup()
+# 
+# # Plot the comparison
+# data_eda %>% ggplot(aes(x = pattern, y = mean_ocis, fill = pattern)) +
+#   geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+#   geom_jitter(width = 0.1, alpha = 0.3) + # See the individual leaders
+#   scale_fill_manual(values = c("High-Low-High" = "#E41A1C", 
+#                                "Low-High-Low" = "#377EB8", 
+#                                "Other" = "gray80")) +
+#   theme_minimal() +
+#   labs(title = "OCIS Scores by Heuristic Learning Pattern",
+#        y = "Organizational Capacity for Innovation (Mean)",
+#        x = "Subgroup Pattern")
+```
+
+# Based on FA scores
+
+```{r load FA data}
+data_fa <- readRDS("Data/oath_data_fa.rds")
+```
+
+
+```{r spaghetti plot}
+data_prelim_fa <- data_fa %>%
+  mutate(
+    pattern = paste0(
+      if_else(Exploration > 0, "H", "L"),
+      if_else(Exploitation > 0, "H", "L"),
+      if_else(Deimplementation > 0, "H", "L")
+    )
+  ) %>%
+  group_by(pattern) %>%
+  mutate(n = n()) %>%
+  ungroup() %>%
+  # 2. Only keep the top 3 most frequent patterns, label the rest "Other"
+  mutate(top_patterns = if_else(dense_rank(desc(n)) <= 2, pattern, "Other"))
+
+# 3. Plot with specific focus
+data_prelim_fa %>%
+  select(Exploration, Exploitation, Deimplementation, top_patterns) %>% 
+  ggparcoord(columns = 1:3,
+             scale = "std",
+             groupColumn = "top_patterns",
+             showPoints = FALSE,
+             alphaLines = 0.3) + 
+  scale_color_manual(values = c(
+    "HHH" = "royalblue",  # High All
+    "LLL" = "red",  # Low All
+    "LLH" = "darkgrey",  # (High Exploit only
+    "Other" = "grey85"  # Mute the noise
+  )) +
+  labs(color = "Profile (ER-ET-DI)", x = "", y = "standardized factor scores") +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(hjust = 0, size = 9, colour = "darkgrey")
+    )
+```
+
+```{r}
+data_prelim_fa %>% 
+  group_by(top_patterns) %>% 
+  summarise(n = n(),
+            prop = n / nrow(data_prelim_fa))
+```
+
+
+```{r}
+# Plot the comparison
+data_prelim_fa <- data_prelim_fa %>%
+  rowwise() %>%
+  mutate(mean_ocis = mean(c_across(starts_with("ocis")), na.rm = TRUE)) %>%
+  ungroup()
+
+data_prelim_fa %>% ggplot(aes(x = top_patterns, y = mean_ocis, fill = top_patterns)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.1, alpha = 0.3) + # See the individual leaders
+  theme_minimal() +
+  labs(title = "OCIS Scores by Heuristic Learning Pattern",
+       y = "Organizational Capacity for Innovation (Mean)",
+       x = "Subgroup Pattern")
+```
+
