@@ -53,8 +53,16 @@ raw_data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx") %>%
 # check if record_id is unique
 nrow(raw_data) == n_distinct(raw_data$record_id)
 
-# drop if all explore, exploit, deimp items are missing
-raw_data <- raw_data %>% filter(if_any(starts_with(c("explore_", "exploit_", "deimplement_")), ~ !is.na(.)))
+# # drop if all explore, exploit, deimp items are missing
+# raw_data <- raw_data %>% filter(if_any(starts_with(c("explore_", "exploit_", "deimplement_")), ~ !is.na(.)))
+
+# keep if having at least one non-missing response from each of the EX, ET, and DI scales
+raw_data <- raw_data %>% 
+  filter(
+    if_any(starts_with("explore_"), ~ !is.na(.)),
+    if_any(starts_with("exploit_"), ~ !is.na(.)),
+    if_any(starts_with("deimplement_"), ~ !is.na(.))
+  )
 
 # check dimension
 dim(raw_data)
