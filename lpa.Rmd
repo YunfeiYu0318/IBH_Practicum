@@ -41,6 +41,8 @@ models_2_fit <- lpa_data %>% estimate_profiles(n_profiles = 1:5, models = 2)
 # Print the fit indices table
 models_1_fit
 models_2_fit
+
+lpa_models <- models_2_fit
 ```
 
 - Model 2 generally give lower AIC/BIC and higher Entropy than Model 1
