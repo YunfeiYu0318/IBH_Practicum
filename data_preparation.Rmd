@@ -50,11 +50,10 @@ raw_data <- read_excel("Data/FINAL_ProjectOATH_DATA_2024-05-08_1639.xlsx") %>%
   # drop completeness check variables
   select(-contains("complete"))
 
+dim(raw_data)
+
 # check if record_id is unique
 nrow(raw_data) == n_distinct(raw_data$record_id)
-
-# # drop if all explore, exploit, deimp items are missing
-# raw_data <- raw_data %>% filter(if_any(starts_with(c("explore_", "exploit_", "deimplement_")), ~ !is.na(.)))
 
 # keep if having at least one non-missing response from each of the EX, ET, and DI scales
 raw_data <- raw_data %>% 
@@ -569,16 +568,38 @@ ggsave(
 - Drop variables that have no variability (have only one value)
 - Calculate row-wise completion rate
 
+
 ```{r create final df}
+# 1. Join clean demographic/role data with raw scale items
 final_data <- demog_final %>% 
   select(-c(language_oath_v2_ASL, language_oath_v2_LSQ, sign_languages)) %>% 
-  right_join(scale_converted, by = "record_id") %>% 
+  right_join(scale_df, by = "record_id")
+
+# 2. Convert '8' (Not Applicable) to NA across all scale items
+final_data <- final_data %>%
+  mutate(across(starts_with(c("explore_", "exploit_", "deimplement_", "ocis", "ols")), 
+                ~na_if(., 8)))
+
+# 3. Filter: Keep respondents with at least one valid (non-NA, non-8) response 
+#    in EACH of the three core ambidexterity & unlearning scales
+final_data <- final_data %>% 
+  filter(
+    if_any(starts_with("explore_"), ~ !is.na(.)),
+    if_any(starts_with("exploit_"), ~ !is.na(.)),
+    if_any(starts_with("deimplement_"), ~ !is.na(.))
+  )
+
+# 4. Calculate final row-wise completion rate across valid items
+final_data <- final_data %>% 
   select(-c(missing_rate, prop_8)) %>% 
-  # calculate overall completion rate
-  mutate(completion_rate = round(rowMeans(!is.na(.))*100, 2))
+  mutate(completion_rate = round(rowMeans(!is.na(.)) * 100, 2))
 
 dim(final_data)
+
+# Save processed dataset
+saveRDS(final_data, "Data/oath_data.rds")
 ```
+
 
 ## Check Completion Rate
 
@@ -597,7 +618,15 @@ final_data %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
-```{r save final data}
-saveRDS(final_data, "Data/oath_data.rds")
+
+
+```{r}
+get_category_summary(data = final_data %>% select(site_oath_v2, role_oath_v2), 
+                     caption = "Distribution by Demographic Variables", id = "record_id")
 ```
+
+
+
+
+
 

@@ -4,7 +4,6 @@ library(tidyverse)
 library(forcats)
 
 
-
 # ----- USING VARIABLE SUMMARY ----- #
 
 # Extract variables of the given category from the summary df
@@ -186,9 +185,166 @@ extract_item_stats <- function(data, alpha_obj, scale_prefix = NULL, cap = NULL)
   return(invisible(final_item_table))
 }
 
+# ---------- CFA Metrics ------------- #
+get_fit_metrics <- function(fit_obj, model_name) {
+  metrics <- fitMeasures(fit_obj, c("chisq", "df", "pvalue", "cfi", "tli", "rmsea", "srmr"))
+  data.frame(
+    Model = model_name,
+    Chisq = round(metrics["chisq"], 3),
+    Df = metrics["df"],
+    CFI = round(metrics["cfi"], 3),
+    TLI = round(metrics["tli"], 3),
+    RMSEA = round(metrics["rmsea"], 3),
+    SRMR = round(metrics["srmr"], 3)
+  )
+}
 
 
+# ----------- LPA Results and Plots ------------- #
+
+plot_lpa_profiles <- function(lpa_model, plot_title = "Latent Profile Analysis") {
+  
+  # Extract the means matrix from the underlying mclust model object
+  if (!"model" %in% names(lpa_model) || !"parameters" %in% names(lpa_model$model)) {
+    stop("The provided object does not appear to be a valid tidyLPA/mclust model slot.")
+  }
+  
+  means_matrix <- lpa_model$model$parameters$mean
+  
+  # Reshape the matrix into a tidy dataframe for ggplot
+  tidy_plot_data <- as.data.frame(means_matrix) %>%
+    rownames_to_column(var = "Indicator") %>%
+    pivot_longer(
+      cols = -Indicator, 
+      names_to = "Profile", 
+      values_to = "Mean_Score"
+    ) %>%
+    mutate(Profile = str_remove(Profile, "V")) # Converts "V1", "V2" to "1", "2"
+  
+  # Generate the clean line plot
+  ggplot(tidy_plot_data, aes(x = Indicator, y = Mean_Score, group = Profile, color = Profile)) +
+    geom_line(aes(linetype = Profile), size = 1.2) + 
+    geom_point(aes(shape = Profile), size = 1.5) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "gray60", alpha = 0.7) +
+    scale_y_continuous(limits = c(-2.5, 2.5), breaks = seq(-2, 2, by = 0.5)) + 
+    labs(
+      title = plot_title,
+      x = "Factor scores",
+      y = "Std. Mean Score",
+      color = "Profile",
+      shape = "Profile",
+      linetype = "Profile"
+    ) +
+    theme_minimal() +
+    theme(
+      panel.grid.minor = element_blank(),
+      legend.position = "bottom",
+      text = element_text(size = 10),
+      axis.text = element_text(face = "bold", size = 8),
+      plot.title = element_text(face = "bold", size = 10)
+    )
+}
 
 
+get_profile_sizes <- function(lpa_model) {
+  # 1. Extract raw classification vector
+  class_vector <- lpa_model$model$classification
+  
+  # 2. Build the dataframe explicitly from the vector
+  data.frame(Profile = class_vector) %>%
+    group_by(Profile) %>%
+    summarise(N = n(), .groups = "drop") %>%
+    mutate(Percentage = round((N / sum(N)) * 100, 2))
+}
 
 
+# ----------- LR Results ------------- #
+
+render_full_regression_table <- function(model, caption = "Regression Results with Model Diagnostics") {
+  
+  # 1. Grab clean coefficients using broom::tidy
+  raw_coefs=tidy(model)
+  stat_label=if (inherits(model, "glm")) "z-value" else "t-value"
+  p_label=if (inherits(model, "glm")) "Pr(>|z|)" else "Pr(>|t|)"
+  
+  # Format the main coefficient grid
+  coef_rows=raw_coefs %>%
+    mutate(
+      estimate=as.character(round(estimate, 5)),
+      std.error=as.character(round(std.error, 5)),
+      statistic=as.character(round(statistic, 3)),
+      p.value=ifelse(p.value < 0.001, "<2e-16 ***", as.character(round(p.value, 3)))
+    ) %>%
+    rename(
+      Term=term,
+      Estimate=estimate,
+      `Std. Error`=std.error,
+      !!stat_label:=statistic,
+      !!p_label:=p.value
+    )
+  
+  # 2. Extract fit statistics safely using broom::glance
+  fit_stats=glance(model)
+  
+  # Handle missing observations string cleanly
+  na_action=if (!is.null(model$na.action)) length(model$na.action) else 0
+  missing_note=if (na_action > 0) paste0("  (", na_action, " observations deleted due to missingness)") else ""
+  
+  # Format F-statistic string
+  f_stat_str=if ("statistic" %in% names(fit_stats) & "df" %in% names(fit_stats)) {
+    paste0(round(fit_stats$statistic, 4), " on ", fit_stats$df - 1, " and ", fit_stats$df.residual, " DF")
+  } else {
+    "N/A"
+  }
+  
+  f_p_val=if ("p.value" %in% names(fit_stats)) as.character(round(fit_stats$p.value, 4)) else "N/A"
+  
+  # 3. Create diagnostic summary rows using safe, static column labels
+  diagnostic_rows=tibble(
+    Term=c(
+      "Residual standard error",
+      "Multiple R-squared",
+      "Adjusted R-squared",
+      "F-statistic",
+      "AIC",
+      "BIC"
+    ),
+    Estimate=c(
+      paste0(round(fit_stats$sigma, 3), " on ", fit_stats$df.residual, " degrees of freedom", missing_note),
+      as.character(round(fit_stats$r.squared, 6)),
+      as.character(round(fit_stats$adj.r.squared, 6)),
+      f_stat_str,
+      as.character(round(fit_stats$AIC, 2)),
+      as.character(round(if("BIC" %in% names(fit_stats)) fit_stats$BIC else BIC(model), 2))
+    ),
+    `Std. Error`=c("", "", "", "p-value:", "", ""),
+    TEMP_STAT_COL=c("", "", "", f_p_val, "", ""),
+    TEMP_P_COL=c("", "", "", "", "", "")
+  ) %>%
+    # Dynamically match the column names to the coefficient table structure
+    rename(
+      !!stat_label:=TEMP_STAT_COL,
+      !!p_label:=TEMP_P_COL
+    )
+  
+  # 4. Bind rows together 
+  final_table=bind_rows(coef_rows, diagnostic_rows)
+  num_coefs=nrow(coef_rows)
+  
+  # 5. Render html table grid
+  final_table %>%
+    kable(
+      format="html",
+      caption=caption,
+      align="lrrrr"
+    ) %>%
+    kable_styling(
+      bootstrap_options=c("striped", "hover", "condensed"),
+      full_width=TRUE,
+      position="center"
+    ) %>%
+    # Bold the structural column header row
+    row_spec(0, bold=TRUE, background="#F8F9FA") %>%
+    # Add a solid dividing boundary separating the coefficients from the diagnostic rows
+    row_spec(num_coefs, extra_css="border-bottom: 2px solid #dee2e6;")
+}

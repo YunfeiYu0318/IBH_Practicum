@@ -1,5 +1,5 @@
 ---
-title: "Analysis"
+title: "Confirmatory Factor Analysis"
 author: "Yunfei Yu"
 date: "2026-04-17"
 output: html_document
@@ -23,21 +23,24 @@ library(knitr)
 library(kableExtra)
 ```
 
+```{r import helper functions, message=FALSE}
+source("helper_functions.R")
+```
 
 ```{r load data}
-oath_data <- readRDS("data/oath_data.rds")
+oath_data <- readRDS("Data/oath_data.rds")
 
 # make sure 8=N/A is converted to missing
 oath_data <- oath_data %>%
   mutate(across(starts_with(c("explore_", "exploit_", "deimplement_")), 
                 ~na_if(., 8))) %>% 
-  filter(if_any(starts_with(c("explore_", "exploit_", "deimplement_")), ~ !is.na(.)))
-
-
-# oath_data <- oath_data %>% 
-#   drop_na(all_of(
-#     starts_with(c("explore", "exploit", "deimplement"))
-#   ))
+  # include if at least one valid (non-missing) response in
+  # each of explore/exploit/deimplement
+  filter(
+    if_any(starts_with("explore_"), ~ !is.na(.)),
+    if_any(starts_with("exploit_"), ~ !is.na(.)),
+    if_any(starts_with("deimplement_"), ~ !is.na(.))
+  )
 
 dim(oath_data)
 ```
@@ -102,10 +105,6 @@ comp_1f <- lavTestLRT(fit3f, fit1f)
 
 
 ## Preliminary CFA Results
-
-```{r 3f model summary}
-summary(fit3f)
-```
 
 ```{r cfa comparison results 1}
 comp_exploit
@@ -198,15 +197,21 @@ m2f_syntax_explore <- paste0(
   'Merged_Factor =~ ', paste(c(clean_explore, clean_deimp), collapse = " + ")
 )
 
+# 1-factor
+m1f_syntax <- paste0(
+  'General_Factor =~ ', paste(c(clean_explore, clean_exploit, clean_deimp), collapse = " + ")
+)
+
 # Fit the Clean Models
 fit3f_clean <- cfa(m3f_syntax, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
 fit2f_clean_exploit <- cfa(m2f_syntax_exploit, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
 fit2f_clean_explore <- cfa(m2f_syntax_explore, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit1f_clean <- cfa(m1f_syntax, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
 ```
 
 ```{r rerun cfa comparison 1}
 # 3f vs exploit-deimp merge
-lavTestLRT(fit3f_clean, fit2f_clean_exploit)
+lavTestLRT(fit3f_clean, fit1f_clean)
 ```
 
 ```{r rerun cfa comparison 2}
@@ -219,6 +224,7 @@ lavTestLRT(fit3f_clean, fit2f_clean_explore)
 # 1. Run the LRTs (Comparing 2-factor models against the 3-factor gold standard)
 lrt_exploit <- lavTestLRT(fit2f_clean_exploit, fit3f_clean)
 lrt_explore <- lavTestLRT(fit2f_clean_explore, fit3f_clean)
+lrt_1f <- lavTestLRT(fit1f_clean, fit3f_clean)
 
 # 2. Extract and combine fit measures into a single data frame
 fit_metrics <- c("df", "chisq", "cfi", "tli", "rmsea", "srmr")
@@ -229,7 +235,9 @@ summary_table <- bind_rows(
   as_tibble(as.list(fitMeasures(fit2f_clean_exploit, fit_metrics))) %>% 
     mutate(Model = "2-Factor<br>(Exploit-DI Merge)"),
   as_tibble(as.list(fitMeasures(fit2f_clean_explore, fit_metrics))) %>% 
-    mutate(Model = "2-Factor<br>(Explore-DI Merge)")
+    mutate(Model = "2-Factor<br>(Explore-DI Merge)"),
+  as_tibble(as.list(fitMeasures(fit1f_clean, fit_metrics))) %>% 
+    mutate(Model = "1-Factor<br>(Explore-Exploit-DI Merge)")
 )
 
 # 3. Add the LRT p-values
@@ -239,7 +247,8 @@ summary_table <- summary_table %>%
     `LRT p-val` = c(
       NA, 
       lrt_exploit$`Pr(>Chisq)`[2], 
-      lrt_explore$`Pr(>Chisq)`[2]
+      lrt_explore$`Pr(>Chisq)`[2],
+      lrt_1f$`Pr(>Chisq)`[2]
     )
   ) %>%
   select(Model, df, chisq, `LRT p-val`, everything())
@@ -269,7 +278,7 @@ summary_table %>%
 ```{r renaming cols for readability}
 # clean up explore & exploit item names for plot readability
 explore_names <- c("ER1", "ER2", "ER3", "ER5", "ER6") #  "ER_def1", "ER_def2"
-exploit_names <- c("ET1", "ET2", "ET3", "ET5", "ET4", "ET6")
+exploit_names <- c("ET1", "ET2", "ET3", "ET5", "ET6")
 deimp_names <- c("DI1", "DI2", "DI3", "DI4") # "DI_def1", "DI_def2"
 
 # update plot labels
@@ -345,27 +354,244 @@ dev.off() # Close the graphics device and save the file
 ```
 
 
-## Factor scores 
+# Diagnostics & Residual Analysis
 
-```{r factor scores}
+- High RMSEA and SRMR: the model is mis-specifying local relationships; the implied covariance structure from the model is not matching the observed sample covariance matrix.
+
+```{r resid cov}
+# +ve: model underestimates the relationship (the two items more correlated in the sample than as the model captures)
+# -ve: model overestimates
+# |z| > 1.96: stats significant misfit
+# |z| > 2.58: severe misfit, driving up RMSEA and SRMR
+
+# Extract standardized residuals
+res_misfit <- resid(fit3f_clean, type = "standardized")
+
+# View the latent/manifest covariance residuals
+# res_misfit$cov
+res_mat <- as.data.frame(res_misfit$cov)
+res_mat$Variable1 <- rownames(res_mat)
+
+# Pivot long, filter out diagonal, and calculate absolute values
+significant_unique <- res_mat %>%
+  pivot_longer(
+    cols = -Variable1, 
+    names_to = "Variable2", 
+    values_to = "Std_residual"
+  ) %>%
+  filter(Variable1 != Variable2 & Std_residual != 0) %>%
+  mutate(Abs_Residual = abs(Std_residual)) %>%
+  
+  # Keep only unique pairs
+  mutate(
+    pair_id = ifelse(Variable1 < Variable2, 
+                     paste(Variable1, Variable2, sep = "__"), 
+                     paste(Variable2, Variable1, sep = "__"))
+  ) %>%
+  # Drop rows with identical pair_ids
+  distinct(pair_id, .keep_all = TRUE) %>%
+  # Remove the helper column
+  select(-pair_id) %>%
+  
+  # Filter by threshold and sort by worst offenders
+  filter(Abs_Residual > 1.96) %>%
+  arrange(desc(Abs_Residual))
+
+# clean up variable names
+cleaned_residuals <- significant_unique %>%
+  mutate(across(c(Variable1, Variable2), function(x) {
+    x %>%
+      # 1. Standardize 'deimplement' names to 'Deimplement'
+      str_replace_all("(?i)deimplement|dmpl", "Deimplement") %>%
+      # 2. Standardize 'explore_innov' or 'explr' to 'Explore'
+      str_replace_all("(?i)explore_innov|explr", "Explore") %>%
+      # 3. Standardize 'exploit_innov' or 'explt' to 'Exploit'
+      str_replace_all("(?i)exploit_innov|explt", "Exploit") %>%
+      # 4. Extract only the Factor Name and the item number (e.g., Explore_6)
+      # This looks for the word, ignores any middle underscores, and grabs the number
+      str_replace_all("^([A-Za-z]+)_*([0-9]+).*", "\\1_\\2")
+  }))
+
+
+print(cleaned_residuals, n = 30)
+```
+
+## Sensitivity Analysis
+
+- **M0** Baseline model: current 3 factor model
+
+- **M1** Dropping EX6 (having large positive residuals with ET1 and EX5)
+
+- **M2** Dropping ET1 (having large positive residuals with EX5, large negative residuals with ET2 (indicating high redundancy), and also correlated with other ET items)
+
+- **M3** Dropping both EX6 and ET1
+
+```{r sensitivity analysis}
+# Define the model syntaxes
+syntax_m0 <- '
+  Explore     =~ explore_innov_1_oath_v2 + explore_innov_2_oath_v2 + explore_innov_3_oath_v2 + explore_innov_5_oath_v2 + explore_innov_6_oath_v2
+  Exploit     =~ exploit_innov_1_oath_v2 + exploit_innov_2_oath_v2 + exploit_innov_3_oath_v2 + exploit_innov_5_oath_v2 + exploit_innov_6_oath_v2
+  Deimplement =~ deimplement_1 + deimplement_2 + deimplement_3 + deimplement_4
+'
+
+syntax_m1 <- '
+  Explore     =~ explore_innov_1_oath_v2 + explore_innov_2_oath_v2 + explore_innov_3_oath_v2 + explore_innov_5_oath_v2
+  Exploit     =~ exploit_innov_1_oath_v2 + exploit_innov_2_oath_v2 + exploit_innov_3_oath_v2 + exploit_innov_5_oath_v2 + exploit_innov_6_oath_v2
+  Deimplement =~ deimplement_1 + deimplement_2 + deimplement_3 + deimplement_4
+'
+
+syntax_m2 <- '
+  Explore     =~ explore_innov_1_oath_v2 + explore_innov_2_oath_v2 + explore_innov_3_oath_v2 + explore_innov_5_oath_v2 + explore_innov_6_oath_v2
+  Exploit     =~ exploit_innov_2_oath_v2 + exploit_innov_3_oath_v2 + exploit_innov_5_oath_v2 + exploit_innov_6_oath_v2
+  Deimplement =~ deimplement_1 + deimplement_2 + deimplement_3 + deimplement_4
+'
+
+syntax_m3 <- '
+  Explore     =~ explore_innov_1_oath_v2 + explore_innov_2_oath_v2 + explore_innov_3_oath_v2 + explore_innov_5_oath_v2
+  Exploit     =~ exploit_innov_2_oath_v2 + exploit_innov_3_oath_v2 + exploit_innov_5_oath_v2 + exploit_innov_6_oath_v2
+  Deimplement =~ deimplement_1 + deimplement_2 + deimplement_3 + deimplement_4
+'
+
+# Fit the models
+fit_m0 <- cfa(syntax_m0, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit_m1 <- cfa(syntax_m1, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit_m2 <- cfa(syntax_m2, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+fit_m3 <- cfa(syntax_m3, data = oath_data, ordered = TRUE, missing = "pairwise", estimator = "WLSMV")
+
+
+# sensitivity table
+sensitivity_table <- bind_rows(
+  get_fit_metrics(fit_m0, "Baseline"),
+  get_fit_metrics(fit_m1, "Drop ER6"),
+  get_fit_metrics(fit_m2, "Drop ET1"),
+  get_fit_metrics(fit_m3, "Drop ER6 & ET1")
+)
+
+sensitivity_table
+```
+On ER6 and ET1:
+
+Item phrasing:
+
+  - ER6: My role involves activities that require team members to learn new skills or knowledge.
+  
+  - ET1: My role involves activities which require team members to accumulate a lot of experience.
+
+Considerations: 
+
+  - Retaining both items created a massive standardized residual covariance ($z = 7.60$), which bloated the model’s overall error indices (RMSEA = 0.121, SRMR = 0.098).
+  
+  - The wording of the two items set them up as direct opposites. EX6 focuses on learning brand-new skills, while ET1 focuses on accumulating routine experience.
+  
+  - Because the items capture opposing poles of the same spectrum, respondents treated them as a trade-off, creating an artificial relationship that the independent factors could not mathematically handle.
+  
+  - Dropping both items eliminated the localized strain, resulting in better model fit (RMSEA = 0.048, SRMR = 0.062, CFI = 0.997).
+
+
+# Best model
+
+```{r renaming cols}
+# item names
+fin_explore <- setdiff(clean_explore, "explore_innov_6_oath_v2")
+fin_exploit <- setdiff(clean_exploit, "exploit_innov_1_oath_v2")
+
+# clean up explore & exploit item names for plot readability
+explore_names <- c("ER1", "ER2", "ER3", "ER5") #  "ER_def1", "ER_def2"
+exploit_names <- c("ET2", "ET3", "ET5", "ET6")
+deimp_names <- c("DI1", "DI2", "DI3", "DI4") # "DI_def1", "DI_def2"
+
+# update plot labels
+# map original names to these new clean labels
+explore_map <- setNames(explore_names, fin_explore)
+exploit_map <- setNames(exploit_names, fin_exploit)
+deimp_map <- setNames(deimp_names, clean_deimp)
+
+# get the order of nodes from the lavaan object
+actual_order <- row.names(inspect(fit_m3, "free")$lambda) 
+latents <- slot(fit_m3, "Model")@dimNames[[1]][[2]]
+all_factors <- c(actual_order, latents)
+
+# create a lookup table for clean labels
+lookup_table <- c(
+  "Deimplementation" = "Deimplementation", 
+  "Exploitation" = "Exploitation", 
+  "Exploration" = "Exploration",
+  explore_map, 
+  exploit_map, 
+  deimp_map
+)
+
+# create the final vector by looking up the labels in the correct order
+final_node_labels <- ifelse(all_factors %in% names(lookup_table), 
+                            lookup_table[all_factors], 
+                            all_factors)
+```
+
+
+```{r final plot}
+groups_list <- list(Explore = fin_explore, 
+                    Exploit = fin_exploit, 
+                    Deimp = clean_deimp)
+
+png("Plots/Final_CFA.png", width = 10, height = 8, units = "in", res = 300)
+
+semPaths(fit_m3,  
+         nodeLabels = final_node_labels,
+         whatLabels = "std",     # standardized loadings
+         layout = "tree2",     
+         style = "lisrel",
+         nCharNodes = 0, 
+         residuals = FALSE, 
+         intercepts = FALSE,
+         rotation = 2,
+         thresholds = FALSE,
+         
+         # --- Sizing ---
+         sizeLat = 14, 
+         sizeMan = 6, 
+         sizeLat2 = 5,
+         sizeMan2 = 3,
+         label.cex = 0.9,
+         label.prop = 0.8,
+         edge.label.cex = 0.6,
+         edge.width = 0.5,
+
+         # --- Grouping  ---
+         edge.color = "#1A1953",
+         groups = groups_list, 
+         color = c("#ebf3f7", "#EFF5D0", "#ffe4c2"),
+         legend = FALSE,
+
+         # --- Spacing ---
+         curvePivot = TRUE,      # Smooth curves for factor correlations
+         
+         # Left, Top, Bottom, Right
+         # Setting a large left margin (20) to ensure items are not cut off.
+         mar = c(3, 20, 3, 10)) 
+
+dev.off() # Close the graphics device and save the file
+```
+
+
+```{r final factor scores}
 # Extract factor scores
-factor_scores <- lavPredict(fit3f_clean)
+factor_scores <- lavPredict(fit_m3)
 
 # Convert to a dataframe and merge with oath_data
 factor_scores_df <- as.data.frame(factor_scores)
 
 # standardize
 factor_scores_df <- factor_scores_df %>%
-  mutate(across(c(Exploration, Exploitation, Deimplementation), 
+  mutate(across(c(Explore, Exploit, Deimplement), 
                 ~as.numeric(scale(.))))
 
 # merge this back to your original data for the LPA
 data_fa_scores <- cbind(oath_data, factor_scores_df)
 
-saveRDS(data_fa_scores, "Data/oath_data_fa.rds")
+saveRDS(data_fa_scores, "Data/oath_data_fa_final.rds")
 ```
 
 ```{r}
-
+summary(fit_m3)
 ```
 
